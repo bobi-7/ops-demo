@@ -1,5 +1,5 @@
 /* ============================================================
-   Parallens 用户运营后台 · 共享壳与全局交互
+   Demo 用户运营后台 · 共享壳与全局交互
    - 侧边栏/顶栏注入（含产品线/区域/角色切换器）
    - 全局状态 PLState（内存态，刷新重置）
    - toast / modal / 演示说明
@@ -26,8 +26,7 @@ var NAV = [
     ] },
     { icon: '📢', label: '策略触达', v2: false, children: [
       { label: '策略配置', href: 'strategy-list.html' },
-      { label: '策略编辑器', href: 'strategy-editor.html' },
-      { label: '渠道适配', href: 'channels.html' },
+      { label: '策略编辑器', href: 'prototype-strategy.html#editor' },
     ] },
   ] },
   { group: '后续版本（v2）', items: [
@@ -43,7 +42,7 @@ function renderSidebar(activePath) {
   var html = '';
   html += '<div class="sidebar-brand">' +
     '<div class="brand-mark">👁</div>' +
-    '<div><div class="brand-name">Parallens</div><div class="brand-sub">用户运营后台 · Demo</div></div>' +
+    '<div><div class="brand-name">Demo</div><div class="brand-sub">用户运营后台 · Demo</div></div>' +
     '</div>';
   NAV.forEach(function (g) {
     html += '<div class="nav-group">' + g.group + '</div>';
@@ -95,14 +94,14 @@ function topbarSegs() {
 
 /** 页面入口：注入壳。opts: {title, prd, demo:{points[], path[]}, noApproval} */
 PL.shell = function (opts) {
-  var path = location.pathname.split('/').pop() || 'index.html';
+  var path = opts.activePath || location.pathname.split('/').pop() || 'index.html';
   var html = '<div class="layout">' +
     '<aside class="sidebar" id="sidebar">' + renderSidebar(path) + '</aside>' +
     '<div class="main">' +
     '<div class="topbar">' +
     '<div class="page-title">' + opts.title + (opts.prd ? '<span class="prd-ref">PRD §' + opts.prd + '</span>' : '') + '</div>' +
     topbarSegs() +
-    '<button class="demo-btn" id="demo-btn">💡 演示说明</button>' +
+    (opts.demo ? '<button class="demo-btn" id="demo-btn">💡 演示说明</button>' : '') +
     '</div>' +
     '<div class="content" id="content">' +
     '<div id="approval-anchor"></div>' +
@@ -134,8 +133,10 @@ PL.shell = function (opts) {
   });
 
   /* 演示说明 */
-  document.getElementById('demo-btn').addEventListener('click', function () { PL.demoInfo(opts.demo); });
-  if (opts.demo) PL.demoInfo(opts.demo, true);
+  if (opts.demo) {
+    document.getElementById('demo-btn').addEventListener('click', function () { PL.demoInfo(opts.demo); });
+    if (opts.autoDemo !== false) PL.demoInfo(opts.demo, true);
+  }
   return document.getElementById('content');
 };
 

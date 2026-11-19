@@ -1,5 +1,5 @@
 /* ============================================================
-   Parallens 用户运营后台 · Demo 设计系统
+   Demo 用户运营后台 · Demo 设计系统
    美学方向：Field Station（野外工作站）—— 墨绿黑侧边栏 + 暖米白内容区
    观鸟线=森林绿 / 狩猎线=琥珀棕 / 双线中性
    技术红线：file:// 直开、零依赖、系统字体栈
@@ -39,7 +39,7 @@
   --shadow: 0 1px 2px rgba(35,32,26,.05), 0 4px 16px rgba(35,32,26,.06);
   --shadow-lg: 0 4px 12px rgba(35,32,26,.10), 0 16px 48px rgba(35,32,26,.12);
 
-  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+  --font: -apple-system, BlinkMacSystemFont, "PingFang SC",
           "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
   --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
 }
@@ -186,7 +186,7 @@ body {
 .filter-divider { width: 1px; height: 24px; background: var(--line); }
 
 /* ============ 表单控件 ============ */
-input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="search"], select, textarea {
+input[type="text"], input[type="number"], input[type="date"], input[type="datetime-local"], input[type="time"], input[type="email"], input[type="search"], input[type="url"], select, textarea {
   font-family: var(--font); font-size: 12.5px; color: var(--ink);
   border: 1px solid var(--line); border-radius: 7px;
   padding: 6px 10px; background: #fff; outline: none;
