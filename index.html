@@ -90,14 +90,15 @@ textarea.control{height:auto;min-height:68px;padding:7px 8px;resize:vertical}
 .tag.green{background:#f0f8ea;color:#397622;border-color:#deefd6}
 .tag.orange{background:#fff6e8;color:#97621b;border-color:#f5e5ca}
 .tag.red{background:#fff0f0;color:#aa343c;border-color:#f4d7da}
+.current-plan{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
 .pager{min-height:51px;padding:10px 15px;display:flex;gap:7px;align-items:center;justify-content:flex-end;flex-wrap:wrap;font-size:12px;color:var(--text)}
 .pager .page-size{width:84px}
 .pager .button{min-width:28px;min-height:28px;padding:2px 7px}
 .pager .selected{background:var(--blue);border-color:var(--blue);color:white}
 .empty{padding:42px 14px;text-align:center;color:var(--muted);font-size:13px}
 .section-tabs{display:flex;gap:24px;border-bottom:1px solid var(--line);padding:0 17px}
-.section-tabs button{border:0;background:none;color:var(--text);padding:11px 1px;border-bottom:2px solid transparent;white-space:nowrap}
-.section-tabs button[aria-selected=true]{color:var(--blue);border-color:var(--blue)}
+.section-tabs button,.section-tabs a{border:0;background:none;color:var(--text);padding:11px 1px;border-bottom:2px solid transparent;white-space:nowrap}
+.section-tabs button[aria-selected=true],.section-tabs a[aria-current=page]{color:var(--blue);border-color:var(--blue)}
 .info-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 18px;margin:0}
 .info-grid div{min-width:0}
 .info-grid dt{color:var(--muted);margin-bottom:3px;font-size:12px}
@@ -107,6 +108,7 @@ textarea.control{height:auto;min-height:68px;padding:7px 8px;resize:vertical}
 .balance{padding:11px 14px;border:1px solid var(--line);background:#fafbfc;display:flex;justify-content:space-between;align-items:center;gap:12px}
 .balance b{font-size:20px;color:#293343;font-weight:600}
 .balance small{margin-left:4px;font-size:12px;color:var(--muted)}
+.quota-cycle{margin:0 0 10px;color:var(--muted);font-size:12px}
 .wizard{max-width:1100px}
 .form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
 .form-space{margin-top:15px}
@@ -210,6 +212,11 @@ dialog.drawer{margin:0 0 0 auto;inset:0 0 0 auto;max-height:100%;height:100%;wid
 .commercial-actions .button-row{margin:0}
 .readonly-box{padding:10px 12px;border:1px solid var(--line);border-radius:4px;background:#f8f9fc}
 .form-text{margin:8px 0 0;color:var(--muted);font-size:12px}
+.plan-eligibility{display:grid;gap:4px;margin-bottom:13px;padding:10px 11px;background:#f3f6fc;border-radius:4px;font-size:13px}
+.plan-eligibility strong{font-weight:550;line-height:1.5}
+.plan-platforms{display:grid;gap:7px;border-top:1px solid var(--line);margin-top:12px;padding-top:11px}
+.plan-platforms div{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px}
+
 .table-status.tag+.tag{margin-left:5px}
 .drawer .info-grid,.dialog-body .info-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
 .drawer .dialog-body h4:not(:first-child){margin-top:18px;padding-top:15px;border-top:1px solid var(--line)}
@@ -263,6 +270,7 @@ dialog.drawer{margin:0 0 0 auto;inset:0 0 0 auto;max-height:100%;height:100%;wid
 .banner-thumb .outreach-pic{width:73px;aspect-ratio:5/2;font-size:10px}
 .batch-ids{height:auto;min-height:88px;padding-top:8px;resize:vertical;font-family:inherit}
 .batch-counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0}
+.batch-counts.execution{grid-template-columns:repeat(4,minmax(0,1fr))}
 .batch-counts div{display:grid;gap:4px;padding:9px 11px;background:#f7f9fd;border:1px solid var(--line);border-radius:4px}
 .batch-counts span{font-size:12px;color:var(--muted)}
 .batch-counts strong{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
@@ -300,10 +308,12 @@ const regions = ['北美', '欧洲'];
 const seriesOptions = ['K3', 'Q5'];
 const subStatuses = ['Free', '试用中', '订阅中', '已过期'];
 const tiers = ['Free', 'Plus', 'Pro'];
+const planStatusLabels = {'订阅中':'订阅','试用中':'试用','赠送':'赠送'};
+const planCycles = {'月付':'Monthly','年付':'Yearly'};
 const renewalLabels = ['续费中', '取消自动续费'];
 const fields = [
   ['id', '用户 ID'], ['email', '邮箱'], ['region', '地区'], ['series', '产品系列'],
-  ['bound', '绑定设备数'], ['tier', '订阅档位'], ['status', '订阅状态'], ['renewal', '续费状态'],
+  ['bound', '绑定设备数'], ['currentPlan', '当前套餐'], ['renewal', '续费状态'],
   ['expiry', '套餐到期时间'], ['registered', '注册时间'], ['login', '最近登录时间']
 ];
 
@@ -314,7 +324,7 @@ const sample = [
   ['欧洲','Free','已过期',null,'2026-11-15',13,27,[['Q5',4]]],
   ['北美','Pro','订阅中',true,'2027-02-01',0,140,[['K3',2]]],
   ['欧洲','Plus','试用中',true,'2026-11-22',18,34,[['Q5',17]]],
-  ['北美','Free','Free',null,'',29,20,[['K3',9],['K3',18]]],
+  ['北美','Plus','赠送',null,'2026-12-18',29,20,[['K3',9],['K3',18]]],
   ['欧洲','Plus','订阅中',false,'2026-11-27',16,104,[['Q5',9],['K3',1]]],
   ['北美','Free','已过期',null,'2026-11-12',30,12,[['K3',8]]],
   ['欧洲','Free','Free',null,'',null,29,[]],
@@ -333,8 +343,9 @@ const users = sample.map(([region, tier, status, renew, expiry, ask, identify, d
   id: 'PL' + (1001 + i), email: 'bird' + String(i + 1).padStart(2, '0') + '@example.com',
   region, tier, status, renew, expiry, ask, identify,
   registered: dayOf(-3 - i * 3), login: dayOf(-(i % 4 === 0 ? i + 2 : i % 6)),
-  period: tier === 'Free' ? '' : i % 3 === 1 ? '年付' : '月付',
-  purchased: tier === 'Free' ? '' : dayOf(-2 - i * 2),
+  period: status==='赠送' ? '固定时长' : tier === 'Free' ? '' : i % 3 === 1 ? '年付' : '月付',
+  giftDays: status==='赠送' ? 30 : null,
+  purchased: tier==='Free'||status==='赠送' ? '' : dayOf(-2 - i * 2),
   devices: devices.map(([series, day], j) => ({
     series, model: series, sn: series + '-DEMO-' + (1001 + i) + '-' + (j + 1),
     activated: '2026-11-' + String(day).padStart(2, '0'), bound: true,
@@ -350,11 +361,21 @@ const users = sample.map(([region, tier, status, renew, expiry, ask, identify, d
     assistantUses:[0,11,15,27,30,90,190,311][i%8],
     packageType:[...(tier==='Free'?[]:[tier]),...([0,3,7].includes(i)?['Extra Memory']:[]),
       ...([0,6].includes(i)?['Extra Device']:[]),...([4,10].includes(i)?['AI Agent']:[])],
-    paidOrders:status==='试用中'||status==='Free'?0:[1,2,5,8,12][i%5]
+    paidOrders:['订阅中','已过期'].includes(status)?[1,2,5,8,12][i%5]:0
   },
-  spend: tier === 'Free' && status === 'Free' ? 0 : 9.99 + i * 4,
-  orders: tier === 'Free' && status === 'Free' ? 0 : 1 + i % 4
+  spend: ['Free','赠送'].includes(status) ? 0 : 9.99 + i * 4,
+  orders: ['Free','赠送'].includes(status) ? 0 : 1 + i % 4
 }));
+const planOpenKey='parallens-review-plan-openings-v1';
+let planOpenings=readStore(planOpenKey,[]);
+function applyPlanOpening(user,record) {
+  Object.assign(user,{tier:record.tier,status:'赠送',renew:null,period:'固定时长',
+    giftDays:record.days,expiry:record.endAt.slice(0,10)});
+}
+for(const record of planOpenings) {
+  const user=memberById(record.uid);
+  if(user&&user.status==='Free'&&Date.parse(record.endAt)>Date.now()) applyPlanOpening(user,record);
+}
 const orders = users.filter(user => user.orders).map((user, i) => ({
   id: 'ORD-DEMO-' + (301 + i), uid: user.id,email:user.email,region:user.region, when: user.purchased || dayOf(-14 - i),
   item: (user.tier === 'Free' ? 'Plus' : user.tier) + ' ' + (user.period || '月付'),
@@ -366,6 +387,12 @@ const orders = users.filter(user => user.orders).map((user, i) => ({
 orders.push({id:'ORD-DEMO-LEGACY',uid:null,email:'legacy-order@example.com',region:'北美',when:'2026-10-05',
   item:'Plus 月付',kind:'订阅',sku:'BIRD-PLUS',price:9.99,currency:'USD',channel:'App Store',
   state:'已完成',payment:'已支付',entitlement:'已到账'});
+for (const id of ['PL1001','PL1005']) {
+  const user=users.find(account=>account.id===id);
+  orders.push({id:'ORD-DEMO-ADDON-'+id,uid:id,email:user.email,region:user.region,when:'2026-11-16',
+    item:'AI 次数包 · 50 次',kind:'加油包',sku:'BIRD-AI-50',price:3.99,currency:'USD',channel:'App Store',
+    state:'已完成',payment:'已支付',entitlement:'已到账'});
+}
 
 const menu = [
   ['首页', '⌂', []],
@@ -375,7 +402,7 @@ const menu = [
   ['图片管理', '▧', [['图片列表']]],
   ['订单管理', '▤', [['订单列表','orders','扩展'], ['待补单列表']]],
   ['反馈管理', '□', [['用户反馈列表']]],
-  ['运营管理', '◉', [['APP通知列表'], ['活动宣传列表'], ['Banner管理','banners','扩展'], ['触达策略','strategies','新增'], ['运营列表'], ['权益下发','batch-benefits','新增'], ['套餐配置','plans','新增']]],
+  ['运营管理', '◉', [['触达策略','strategies','新增'], ['Banner管理','banners','扩展'], ['APP通知列表'], ['活动宣传列表'], ['运营列表'], ['权益下发','batch-benefits','新增'], ['套餐配置','plans','新增']]],
   ['内容管理平台', '☷', [['探索管理']]],
   ['文件管理中心', '▱', [['相机LOG文件']]],
   ['运维管理', '⚙', [['工单列表']]]
@@ -398,7 +425,7 @@ const legacyGroupCriteria = {
   last:{section:'状态',label:'最近活跃',choices:ranges([['今日',0,0],['近 7 天',0,7],['近 30 天',0,30],['超过 30 天未活跃',31]])},
   opens:{section:'App 行为',label:'近 7 天 App 启动次数',choices:ranges([['0 次',0,0],['1–2 次',1,2],['3–7 次',3,7],['8 次及以上',8]])},
   files:{section:'App 行为',label:'拍摄文件数',choices:ranges([['0–10 个',0,10],['11–100 个',11,100],['101 个及以上',101]])},
-  status:{section:'消费',label:'订阅状态',choices:categorical(subStatuses)},
+  status:{section:'消费',label:'订阅状态',choices:[{label:'免费',value:'Free'},...categorical(subStatuses)]},
   tier:{section:'消费',label:'订阅档位',choices:categorical(tiers)},
   remaining:{section:'消费',label:'订阅剩余天数',choices:ranges([['7 天及以内',0,7],['8–30 天',8,30],['超过 30 天',31]])},
   spend:{section:'消费',label:'累计付费金额（USD）',choices:ranges([['未付费',0,0],['0.01–50',0.01,50],['50.01–200',50.01,200],['超过 200',200.01]])},
@@ -419,19 +446,23 @@ const groupCriteria = {
   assistantUses:{section:'App 行为',label:'AI 问答使用频次',choices:ranges([['0–15 次',0,15],['16–30 次',16,30],['31–150 次',31,150],['151–300 次',151,300],['301 次及以上',301]])},
   sharedWith:{section:'App 行为',label:'当前有效共享人数',choices:ranges([['0 位',0,0],['1–3 位',1,3],['4–5 位',4,5],['6–10 位',6,10]])},
   files:{section:'App 行为',label:'拍摄文件数',choices:ranges([['0 个',0,0],['1–50 个',1,50],['51–150 个',51,150],['151–250 个',151,250],['251 个及以上',251]])},
-  status:{section:'消费',label:'订阅状态',choices:[{label:'免费',value:'Free'},...categorical(['试用中','订阅中','即将过期','已过期'])]},
+  status:{section:'消费',label:'套餐状态',choices:[
+    {label:'No Plan',value:'no-current-plan'},{label:'试用',value:'试用中'},{label:'订阅',value:'订阅中'},
+    ...categorical(['赠送','即将过期','已过期'])]},
+  tier:{section:'消费',label:'套餐档位',choices:categorical(['Plus','Pro'])},
   packageType:{section:'消费',label:'套餐类型',choices:categorical(['Plus','Pro','Extra Memory','Extra Device','AI Agent'])},
-  period:{section:'消费',label:'套餐周期',choices:categorical(['月付','年付','半年付'].filter(cycle=>planSkus.some(item=>item.line==='观鸟线'&&item.cycle===cycle)))},
-  remaining:{section:'消费',label:'订阅剩余天数',choices:ranges([['0–3 天',0,3],['4–7 天',4,7],['8–30 天',8,30],['31 天及以上',31]])},
+  period:{section:'消费',label:'套餐周期',choices:categorical(['月付','年付','固定时长'])},
+  remaining:{section:'消费',label:'套餐剩余天数',choices:ranges([['0–3 天',0,3],['4–7 天',4,7],['8–30 天',8,30],['31 天及以上',31]])},
   spend:{section:'消费',label:'累计付费金额',choices:ranges([['0 USD',0,0],['>0 至 50 USD',0,50,true],['>50 至 200 USD',50,200,true],['超过 200 USD',200,undefined,true]])},
   paidOrders:{section:'消费',label:'累计实付订单数',choices:ranges([['0 次',0,0],['1 次',1,1],['2–5 次',2,5],['6–10 次',6,10],['11 次及以上',11]])}
 };
 const allGroupCriteria={...legacyGroupCriteria,...groupCriteria};
-const groupSections=['全部','属性','设备','状态','App 行为','消费'];
+const firstReleaseGroupFields=new Set(['region','line','series','bound','activated','registered','lastOpen','status','tier','period','remaining']);
+const groupSections=['全部','属性','设备','状态','消费'];
 const initialGroups = [
-  {id:'G001',name:'K3 即将到期订阅',type:'rule',series:'K3',match:'all',rules:[{field:'remaining',op:'preset',value:'7 天及以内'},{field:'status',op:'preset',value:'订阅中'}],tags:['续费提醒'],desc:'当前订阅有效且 7 天内到期。',created:'2026-11-15',time:'2026-11-20 07:30 UTC',status:'已引用',refs:['Push · 订阅到期提醒']},
+  {id:'G001',name:'K3 即将到期订阅',type:'rule',series:'K3',match:'all',rules:[{field:'remaining',op:'preset',value:'0–3 天'},{field:'remaining',op:'preset',value:'4–7 天'},{field:'status',op:'preset',value:'订阅'}],tags:['续费提醒'],desc:'当前订阅有效且 7 天内到期。',created:'2026-11-15',time:'2026-11-20 07:30 UTC',status:'已引用',refs:['Push · 订阅到期提醒']},
   {id:'G002',name:'观鸟客服补偿名单',type:'fixed',series:'',tags:['客服补偿'],desc:'运营核对后的固定名单。',created:'2026-11-17',time:'2026-11-17 10:00 UTC',status:'未引用',refs:[],members:['PL1001','PL1004','PL1012']},
-  {id:'G003',name:'Q5 试用中用户',type:'rule',series:'Q5',match:'all',rules:[{field:'status',op:'preset',value:'试用中'}],tags:['试用引导'],desc:'已绑定 Q5，当前处于试用期。',created:'2026-11-18',time:'2026-11-19 07:30 UTC',status:'已引用',failed:true,refs:['App 弹窗 · 试用指引']},
+  {id:'G003',name:'Q5 试用中用户',type:'rule',series:'Q5',match:'all',rules:[{field:'status',op:'preset',value:'试用'}],tags:['试用引导'],desc:'已绑定 Q5，当前处于试用期。',created:'2026-11-18',time:'2026-11-19 07:30 UTC',status:'已引用',failed:true,refs:['App 弹窗 · 试用指引']},
   {id:'G004',name:'未绑定设备的账号',type:'rule',series:'',match:'all',rules:[{field:'bound',op:'preset',value:'0 台'}],tags:[],desc:'绑定设备数量为 0。',created:'2026-11-19',time:'2026-11-19 11:30 UTC',status:'未引用',refs:[]},
   {id:'G005',name:'欧洲活动测试',type:'fixed',series:'',tags:['活动测试'],desc:'已完成的测试名单。',created:'2026-11-13',time:'2026-11-13 09:30 UTC',status:'已停用',refs:[],members:['PL1002']}
 ];
@@ -537,25 +568,45 @@ function memberById(id) { return users.find(user => user.id === id); }
 function bound(user, series='') { return user.devices.filter(device => device.bound && (!series || device.series === series)); }
 function seriesOf(user) { return [...new Set(bound(user).map(device => device.series))].sort().join('、'); }
 function renewalOf(user) { return user.renew === null ? '—' : user.renew ? renewalLabels[0] : renewalLabels[1]; }
+function currentPlanOf(user) {
+  const status=planStatusLabels[user.status];
+  if (!status) return {label:'No Plan',status:'No Plan',tier:'',period:''};
+  const term=user.giftDays ? user.giftDays+' Days' : (planCycles[user.period]||user.period);
+  return {label:[user.tier,term].filter(Boolean).join(' - '),status,tier:user.tier,period:user.period};
+}
+function currentPlanText(user) {
+  const plan=currentPlanOf(user);
+  return plan.status==='No Plan' ? plan.label : plan.label+'（'+plan.status+'）';
+}
+function currentPlanCell(user, link=false) {
+  const plan=currentPlanOf(user);
+  const name=link ? `<a href="#/users/${esc(user.id)}" data-detail-from="#/users">${esc(plan.label)}</a>` : esc(plan.label);
+  const badge=plan.status==='No Plan'?'':tag(plan.status,{'订阅':'green','试用':'orange','赠送':'blue'}[plan.status]);
+  return `<span class="current-plan">${name}${badge}</span>`;
+}
 function includes(haystack, needle) { return String(haystack ?? '').toLowerCase().includes(String(needle ?? '').trim().toLowerCase()); }
 function inRange(date, from, to) { return (!from && !to) || Boolean(date && (!from || date >= from) && (!to || date <= to)); }
 function valueFor(user, key, series) {
   if (key === 'series') return series || seriesOf(user);
   if (key === 'bound') return bound(user, series).length;
+  if (key === 'currentPlan') return currentPlanText(user);
   if (key === 'renewal') return renewalOf(user);
   return user[key];
 }
 function filterUsers(q) {
   if (q.app !== 'Parallens') return [];
-  return users.filter(user => includes(user.id,q.id) && includes(user.email,q.email) &&
-    (!q.device || bound(user,q.series).some(device => includes(device.sn,q.device))) &&
-    (!q.series || bound(user,q.series).length > 0) && (!q.region || user.region === q.region) &&
-    (!q.tier || user.tier === q.tier) && (!q.status || user.status === q.status) &&
-    (!q.renewal || renewalOf(user) === q.renewal) &&
-    (!q.bound || bound(user,q.series).length === Number(q.bound)) &&
-    inRange(user.expiry,q.expiresFrom,q.expiresTo) &&
-    inRange(user.registered,q.registeredFrom,q.registeredTo) &&
-    inRange(user.login,q.loginFrom,q.loginTo)).sort((a,b) => b.registered.localeCompare(a.registered));
+  return users.filter(user => {
+    const plan=currentPlanOf(user);
+    return includes(user.id,q.id) && includes(user.email,q.email) &&
+      (!q.device || bound(user,q.series).some(device => includes(device.sn,q.device))) &&
+      (!q.series || bound(user,q.series).length > 0) && (!q.region || user.region === q.region) &&
+      (!q.planTier || plan.tier === q.planTier) && (!q.planStatus || plan.status === q.planStatus) &&
+      (!q.planPeriod || plan.period === q.planPeriod) && (!q.renewal || renewalOf(user) === q.renewal) &&
+      (!q.bound || bound(user,q.series).length === Number(q.bound)) &&
+      inRange(user.expiry,q.expiresFrom,q.expiresTo) &&
+      inRange(user.registered,q.registeredFrom,q.registeredTo) &&
+      inRange(user.login,q.loginFrom,q.loginTo);
+  }).sort((a,b) => b.registered.localeCompare(a.registered));
 }
 function pageOf(name, data) {
   const count = Math.max(1,Math.ceil(data.length / sizes[name]));
@@ -566,13 +617,12 @@ function pager(name,total) {
   const page = paging[name], size = sizes[name], count = Math.max(1,Math.ceil(total/size));
   const control = (label,i,disabled=false) => `<button class="button ${i===page && label===String(i) ? 'selected' : ''}" type="button" data-action="page" data-id="${name}:${i}" ${disabled?'disabled':''}>${label}</button>`;
   return `<div class="pager"><span>共 ${total} 条</span><label><select class="control page-size" data-page-size="${name}" aria-label="每页条数">
-    ${[10,20,50].map(n=>option(n,n+' 条/页',size)).join('')}</select></label>${control('‹',page-1,page===1)}
+    ${(name==='strategies'?[10,20,50,100]:[10,20,50]).map(n=>option(n,n+' 条/页',size)).join('')}</select></label>${control('‹',page-1,page===1)}
     ${Array.from({length:count},(_,i)=>control(String(i+1),i+1)).join('')}${control('›',page+1,page>=count)}</div>`;
 }
 
 let userSort = 'desc';
 const all = label => ['',label];
-const brands = ['Parallens','Camojojo','Hibird','BuckSnap'];
 const normalUserTitle = {label:'APP用户列表',url:'#/users'};
 const orderTitle = {label:'订单列表',url:'#/orders'};
 const groupTitle = {label:'用户分组',url:'#/groups'};
@@ -592,30 +642,29 @@ function renderUsers() {
   ];
   const rows = visible.map(user => [
     htmlCell(`<input type="checkbox" data-check="user" value="${user.id}" aria-label="勾选 ${user.id}" ${checked.has(user.id)?'checked':''}>`),
-    ...fields.map(([key]) => {
-      const value = valueFor(user,key,appliedQuery.series);
-      return key === 'status' ? htmlCell(statusTag(value)) : value;
-    }),
+    ...fields.map(([key]) => key==='currentPlan'
+      ? htmlCell(currentPlanCell(user,true)) : valueFor(user,key,appliedQuery.series)),
     htmlCell(`<a href="#/users/${user.id}" data-detail-from="#/users">查看详情</a><a href="#/benefits/${user.id}" data-start-benefit="${user.id}">权益下发</a>`,'actions')
   ]);
   main.innerHTML = crumb('用户管理','APP用户列表') + pageHead('APP用户列表') + `
     <form class="panel filters" data-search="users" aria-label="用户筛选">
       <div class="filter-top">
-        ${select('app','APP类型',[all('请选择'),...brands],q.app)}
+        ${input('app','APP类型','Parallens','readonly')}
         ${input('id','用户 ID',q.id,'placeholder="请输入"')}
         ${input('email','用户邮箱',q.email,'placeholder="请输入"')}
         ${input('device','设备号',q.device,'placeholder="请输入 SN"')}
         ${select('region','地区',[all('全部'),...regions],q.region)}
         ${select('series','产品系列',[all('全部'),...seriesOptions],q.series)}
-        ${select('status','订阅状态',[all('全部'),...subStatuses],q.status)}
+        ${select('planStatus','套餐状态',[all('全部'),'订阅','试用','赠送','No Plan'],q.planStatus)}
       </div>
       <div class="filter-more" ${moreFilters?'':'hidden'}>
-        ${select('tier','订阅档位',[all('全部'),...tiers],q.tier)}
+        ${select('planTier','套餐档位',[all('全部'),'Plus','Pro'],q.planTier)}
+        ${select('planPeriod','套餐周期',[all('全部'),'月付','年付','固定时长'],q.planPeriod)}
         ${select('renewal','续费状态',[all('全部'),...renewalLabels,['—','无适用设置']],q.renewal)}
         ${select('bound','绑定设备数',[all('全部'),...Array.from({length:11},(_,i)=>[i,i+' 台'])],q.bound)}
-        ${range('expires','套餐到期时间',q)}
-        ${range('registered','注册时间',q)}
-        ${range('login','最近登录时间',q)}
+        ${range('expires','套餐到期时间（UTC）',q)}
+        ${range('registered','注册时间（UTC）',q)}
+        ${range('login','最近登录时间（UTC）',q)}
       </div>
       <div class="filter-actions button-row"><button class="button primary" type="submit">搜索</button>
         ${button('重置','reset-users')}
@@ -637,6 +686,15 @@ function infos(values) {
   return `<dl class="info-grid">${values.map(([label,value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value ?? '—') || '—'}</dd></div>`).join('')}</dl>`;
 }
 function block(title,inner) { return `<section class="panel padded"><h3>${esc(title)}</h3>${inner}</section>`; }
+function userPlanHistory(user) {
+  const subscriptions=user.id==='PL1001' ? [['订阅','Plus - Monthly','2026-10-17','2026-11-17','—']] :
+    user.status==='已过期'
+      ? [['订阅','Plus - Monthly',new Date(Date.parse(user.expiry)-30*DAY).toISOString().slice(0,10),user.expiry,'—']]
+      : [];
+  const addOns=orders.filter(order=>order.uid===user.id&&order.kind==='加油包'&&['已支付','已退款'].includes(order.payment))
+    .map(order=>['加油包',order.item,order.when,order.expiry||'—',order.payment]);
+  return [...subscriptions,...addOns].sort((a,b)=>b[2].localeCompare(a[2]));
+}
 function renderDetail(user) {
   const userGroups = groups.filter(group => group.status !== '已停用' && group.members.includes(user.id));
   const navs = [['plan','订阅与权益'],['devices','设备'],['groups','用户分组']];
@@ -653,23 +711,20 @@ function renderDetail(user) {
     ])));
   } else {
     const quotas = [['AI 问答（AI 管家）',user.ask],['AI 识别',user.identify]];
-    const history = user.id === 'PL1001'
-      ? [['Plus','月付','2026-10-17','2026-11-17']]
-      : user.status === '已过期'
-        ? [['Plus','月付',new Date(Date.parse(user.expiry)-30*DAY).toISOString().slice(0,10),user.expiry]]
-        : [];
-    body = `<div class="stack">${block('当前订阅',infos([
-      ['当前套餐',user.tier],['订阅状态',user.status],['续费状态',renewalOf(user)],
-      ['套餐周期',user.period],['购买时间',user.purchased],['套餐到期时间',user.expiry]
+    const quotaCycle=user.status==='订阅中' ? '按账期月更新' :
+      ['试用中','赠送'].includes(user.status) ? '按当前权益周期展示' : '按自然月更新';
+    body = `<div class="stack">${block('当前套餐',infos([
+      ['套餐与状态',currentPlanText(user)],['续费状态',renewalOf(user)],
+      ['购买时间',user.purchased],['套餐到期时间',user.expiry]
     ]))}
-    ${block('本月 AI 剩余次数',`<div class="balance-grid">${quotas.map(([label,amount]) =>
+    ${block('当前周期 AI 剩余次数',`<p class="quota-cycle">${quotaCycle}</p><div class="balance-grid">${quotas.map(([label,amount]) =>
       `<div class="balance"><span>${esc(label)}</span><span><b>${amount??'—'}</b>${amount==null?'':'<small>次</small>'}</span></div>`).join('')}</div>`)}
     ${block('赠送与共享权益',table(['权益内容','来源','取得时间','价格','周期','生效状态','剩余量'],userGiftRows(user)))}
-    ${block('历史订阅',table(['套餐档位','订阅周期','购买时间','到期时间'],history))}</div>`;
+    ${block('历史订阅与加油包',table(['类型','套餐或加油包','购买时间','到期时间','支付状态'],userPlanHistory(user)))}</div>`;
   }
   main.innerHTML = crumb('用户管理','用户详情',normalUserTitle) + pageHead('用户详情',button('返回','back-detail')+button('查看订单','orders-for','primary'),'新增') + `
     <div class="stack">
-      ${block('账号信息',infos([['用户 ID',user.id],['邮箱',user.email],['地区',user.region],['产品系列',seriesOf(user)],['注册时间',user.registered],['最近登录时间',user.login],['订阅档位',user.tier],['订阅状态',user.status]]))}
+      ${block('账号信息',infos([['用户 ID',user.id],['邮箱',user.email],['地区',user.region],['产品系列',seriesOf(user)],['注册时间',user.registered],['最近登录时间',user.login],['当前套餐',currentPlanText(user)]]))}
       <div><div class="panel">${tabsHtml}</div><div style="margin-top:14px">${body}</div></div>
     </div>`;
 }
@@ -696,13 +751,13 @@ function renderOrders() {
   ]);
   main.innerHTML = crumb('订单管理','订单列表') + pageHead('订单列表',orderBack!=='#/orders'?button('返回用户详情','back-orders'):'') + `
     <form class="panel filters" data-search="orders" aria-label="订单筛选"><div class="filter-top">
-      ${select('app','APP类型',[all('请选择'),...brands],q.app)}
+      ${input('app','APP类型','Parallens','readonly')}
       ${input('id','订单号',q.id,'placeholder="请输入"')}
       ${input('email','用户邮箱',q.email,'placeholder="请输入"')}
       ${select('region','区域',[all('全部'),...regions],q.region)}
       ${select('payment','支付状态',[all('全部'),'已支付','已退款'],q.payment)}
       ${select('state','订单状态',[all('全部'),'已完成','已退款'],q.state)}
-      ${select('kind','商品类型',[all('全部'),'订阅'],q.kind)}
+      ${select('kind','商品类型',[all('全部'),'订阅','加油包'],q.kind)}
       ${input('item','商品名称',q.item,'placeholder="请输入"')}
       ${select('channel','支付方式',[all('全部'),'App Store','Google Play'],q.channel)}
       ${range('order','创建时间',q)}
@@ -752,9 +807,12 @@ function editableRules(rules) {
 function describeRule(rule) {
   return rule.op==='preset' ? rule.value : (opLabels[rule.op]||'')+' '+rule.value;
 }
-function daysAgo(date) { return Math.round((Date.parse(DEMO_DATE)-Date.parse(date))/DAY); }
+function daysAgo(date) {
+  const utcDay = Math.floor(Date.parse(date) / DAY);
+  return Date.parse(DEMO_DATE) / DAY - utcDay;
+}
 function groupRemainingDays(user) {
-  if(!user.expiry||!['试用中','订阅中'].includes(user.status)) return null;
+  if(!user.expiry||currentPlanOf(user).status==='No Plan') return null;
   const remaining=-daysAgo(user.expiry);
   return remaining>=0?remaining:null;
 }
@@ -766,6 +824,7 @@ function criterionValue(user, field, devices) {
     case 'remaining': return groupRemainingDays(user);
     case 'status': {
       const remaining=groupRemainingDays(user);
+      if(currentPlanOf(user).status==='No Plan') return [user.status,'no-current-plan'];
       return remaining!==null&&remaining<=3?[user.status,'即将过期']:user.status;
     }
     case 'opens': return devices.reduce((sum,device) => sum+device.opens,0);
@@ -997,10 +1056,10 @@ function memberRows(list,series,selectable=false) {
   return list.map(user => [
     ...(selectable ? [htmlCell(`<input type="checkbox" data-member="${user.id}" aria-label="选择 ${user.id}" ${wizard.selected.has(user.id)?'checked':''}>`)] : []),
     htmlCell(`<a href="#/users/${user.id}" data-detail-from="${esc(location.hash || '#/groups')}">${user.id}</a>`),
-    user.email,user.region,series||seriesOf(user),htmlCell(statusTag(user.status)),bound(user,series).length,user.login
+    user.email,user.region,series||seriesOf(user),htmlCell(currentPlanCell(user)),bound(user,series).length,user.login
   ]);
 }
-const previewColumns = ['用户 ID','邮箱','地区','产品系列','订阅状态','绑定设备数','最近登录时间'];
+const previewColumns = ['用户 ID','邮箱','地区','产品系列','当前套餐','绑定设备数','最近登录时间'];
 function renderGroupDetail(group) {
   const result=group.members.map(memberById).filter(Boolean);
   main.innerHTML=crumb('用户管理','分组详情',groupTitle)+pageHead('分组详情',button('返回分组列表','go-groups'))+`
@@ -1016,7 +1075,7 @@ function renderGroupDetail(group) {
 function wizardDraft(source=null,editing=false) {
   return {
     editing:editing ? source.id : '',type:source?.type || 'rule',series:source?.series || '',
-    match:source?.match || 'all',rules:editableRules(source?.rules),category:'全部',
+    match:'all',legacyMatch:source?.match==='any',rules:editableRules(source?.rules),category:'全部',
     name:source ? editing ? source.name : source.name+' 副本' : '',desc:source?.desc || '',
     tags:new Set(source?.tags || []),importIds:'',fileName:'',missing:[],step:1,
     selected:new Set(source?.members || []),preview:[],query:'',previewPage:1,sort:'desc',error:''
@@ -1051,7 +1110,7 @@ function ruleCatalog() {
     const count=[...selected.keys()].filter(key=>allGroupCriteria[key].section===section).length;
     return `<button type="button" data-action="catalog-tab" data-id="${section}" aria-pressed="${w.category===section}">${section}${count?' · '+count:''}</button>`;
   }).join('');
-  const fields=Object.entries(groupCriteria);
+  const fields=Object.entries(groupCriteria).filter(([key])=>firstReleaseGroupFields.has(key));
   const sections=groupSections.slice(1).filter(section=>w.category==='全部'||w.category===section);
   const bodies=sections.map(section=>{
     const rows=fields.filter(([,meta])=>meta.section===section);
@@ -1066,16 +1125,15 @@ function ruleCatalog() {
         <td class="criteria-field">${esc(meta.label)}</td><td><div class="chips">${choices}</div></td></tr>`;
     }).join('')+'</tbody>';
   }).join('');
-  const legacy=w.rules.some(rule=>rule.op!=='preset' || !groupCriteria[rule.field]?.choices.some(choice=>choice.label===rule.value));
+  const legacy=w.rules.some(rule=>!firstReleaseGroupFields.has(rule.field)||rule.op!=='preset'||
+    !groupCriteria[rule.field]?.choices.some(choice=>choice.label===rule.value));
   return `<div class="split-catalog">
     <section class="panel" aria-label="筛选条件">
-      <header class="catalog-header"><h3>筛选条件</h3><div class="choices" aria-label="条件组合">
-        ${presetChip('全部满足（且）','match-rules','all',w.match==='all')}
-        ${presetChip('任一满足（或）','match-rules','any',w.match==='any')}
-      </div></header>
+      <header class="catalog-header"><h3>筛选条件</h3><span class="small muted">不同条件全部满足 · 时间按 UTC，北京时间 08:00 换日</span></header>
       <div class="catalog-tabs" aria-label="主维度">${categories}</div>
       <table class="criteria-table"><thead><tr><th scope="col">主维度</th><th scope="col">子维度</th><th scope="col">取值</th></tr></thead>${bodies}</table>
-      ${legacy?'<p class="padded small muted" style="margin:0">已选历史档位可继续使用，也可移除后改选新档位。</p>':''}
+      ${w.legacyMatch?'<p class="padded small muted" style="margin:0">原分组使用任一满足，本次按全部满足重新预览。</p>':''}
+      ${legacy?'<p class="padded small muted" style="margin:0">历史取值保留在已选条件。首期未开放的条件需先移除。</p>':''}
     </section>${selectedConditions()}</div>`;
 }
 function wizardSettings() {
@@ -1185,8 +1243,8 @@ function wizardNext() {
   if (w.step===1) {
     if (w.type==='rule' && !w.series && !w.rules.length) {
       w.error='请选择一个产品系列或至少一个筛选条件。';
-    } else if (w.type==='rule' && w.rules.some(rule=>rule.op!=='preset')) {
-      w.error='历史条件需移除或改用预设取值后再预览。';
+    } else if (w.type==='rule' && w.rules.some(rule=>rule.op!=='preset'||!firstReleaseGroupFields.has(rule.field))) {
+      w.error='请移除首期未开放的条件，或改用首期预设取值后再预览。';
     } else {
       updatePreview();
       w.step++;
@@ -1259,7 +1317,7 @@ function exportGroup(group) {
   const list=group.members.map(memberById).filter(Boolean);
   if (!list.length) { notify('当前分组暂无可导出的账号');return; }
   csvDownload(group.id+'-用户分组.csv',previewColumns,list.map(user=>
-    [user.id,user.email,user.region,seriesOf(user),user.status,bound(user,group.series).length,user.login]));
+    [user.id,user.email,user.region,group.series||seriesOf(user),currentPlanText(user),bound(user,group.series).length,user.login]));
   notify('已导出 '+list.length+' 人');
 }
 function showOrder(order) {
@@ -1292,9 +1350,13 @@ const benefitItems={
   devices:{label:'设备追加包',kind:'quantity',unit:'台'},
   storage:{label:'云存储空间包',kind:'quantity',unit:'GB'}
 };
+const activityBenefitItems=Object.entries(benefitItems).filter(([,item])=>item.kind==='quantity');
+const isActivityBenefit=key=>activityBenefitItems.some(([id])=>id===key);
+const planOpeningTiers=new Map([['open-plus','Plus'],['open-pro','Pro']]);
+const isPlanOpening=entry=>planOpeningTiers.has(entry.item);
 const benefitKey='parallens-review-benefits-v1';
 const benefitSeeds=[
- {id:'BT-1001',uid:'PL1001',name:'客服补偿 · Plus 30 天',purpose:'客服补偿',item:'plus',duration:'30',unit:'天',quantity:'',method:'优惠券',deadline:'2026-12-20',limit:'1',created:'2026-11-18 08:40 UTC',issued:'2026-11-18 08:42 UTC',status:'发放完成',redemption:'未使用'},
+ {id:'BT-1001',uid:'PL1001',name:'客服补偿 · AI 次数包',purpose:'客服补偿',item:'ai',duration:'',unit:'',quantity:'30',method:'优惠券',deadline:'2026-12-20',limit:'1',created:'2026-11-18 08:40 UTC',issued:'2026-11-18 08:42 UTC',redeemedAt:'2026-11-19 09:00 UTC',status:'发放完成',redemption:'已使用'},
  {id:'BT-1002',uid:'PL1001',name:'活动赠送 · AI 次数包',purpose:'活动福利',item:'ai',quantity:'50',method:'兑换码',deadline:'2026-12-20',limit:'1',created:'2026-11-19 06:20 UTC',issued:'',status:'发放失败',redemption:'—',reason:'模拟接口超时'}
 ];
 let benefitTasks=readStore(benefitKey,benefitSeeds);
@@ -1321,28 +1383,20 @@ function benefitAmount(entry) {
   if (item.kind==='duration') return entry.duration?entry.duration+' '+entry.unit:'—';
   return entry.quantity?entry.quantity+' '+item.unit:'—';
 }
-function benefitTiming(entry,user) {
-  if (benefitItems[entry.item]?.kind==='duration') {
-    if (user.expiry && user.expiry>=isoToday() && ['试用中','订阅中'].includes(user.status)) {
-      return '当前套餐到期后顺延（'+user.expiry+'）';
-    }
-    return '兑换后生效';
-  }
-  return entry.item?'到账时间待评审确认':'—';
+function benefitTiming(entry) {
+  return entry.item?'核销后发放独立权益，入账时间按权益规则':'—';
 }
 function freshBenefit(user) {
   return {uid:user.id,id:'',name:'',item:'',purpose:'',duration:'30',unit:'天',quantity:'',
-    method:'优惠券',deadline:isoToday(30),limit:'1',step:0,error:''};
+    term:'30',customDays:'',planReason:'',method:'优惠券',deadline:isoToday(30),limit:'1',step:0,error:''};
 }
-function benefitContentFields(entry) {
-  const item=benefitItems[entry.item];
-  const display=item?.kind==='quantity'
-    ? input('quantity','权益数量（'+item.unit+'）',entry.quantity,'type="number" min="1" required')
-    : item ? input('duration','权益时长',entry.duration,'type="number" min="1" required')+
-      select('unit','时长单位',['天','月','年'],entry.unit) : '';
+function benefitContentFields(entry,itemField=select('item','权益项',
+  [all('请选择'),...activityBenefitItems.map(([key,data])=>[key,data.label])],entry.item,'required')) {
+  const item=isActivityBenefit(entry.item)?benefitItems[entry.item]:null;
+  const display=item?input('quantity','权益数量（'+item.unit+'）',entry.quantity,'type="number" min="1" required'):'';
   return commercialSection('权益内容',`<div class="form-grid two">
       ${input('name','任务名称',entry.name,'placeholder="请输入任务名称" maxlength="60" required')}
-      ${select('item','权益项',[all('请选择'),...Object.entries(benefitItems).map(([key,data])=>[key,data.label])],entry.item,'required')}
+      ${itemField}
       ${display}
       ${input('purpose','用途',entry.purpose,'placeholder="如：客服补偿" maxlength="100" required')}
     </div>`);
@@ -1353,19 +1407,51 @@ function benefitMethodChoices(method,action,codeDescription) {
     ${choiceCard('兑换码',codeDescription,action,'兑换码',method==='兑换码')}
   </div>`;
 }
-function benefitFields(entry) {
-  return `<div class="stack">${benefitContentFields(entry)}
-    ${commercialSection('发放方式',`${benefitMethodChoices(entry.method,'benefit-method','生成兑换码供用户兑换')}
-    <div class="form-grid two form-space">${input('deadline','领取或兑换截止日期',entry.deadline,'type="date" required')}
-      ${input('limit','同账号限领次数',entry.limit,'type="number" min="1" required')}</div>`)}
+function singleBenefitItemField(entry,canOpenPlan) {
+  if (!canOpenPlan) return select('item','权益项',
+    [all('请选择'),...activityBenefitItems.map(([key,item])=>[key,item.label])],entry.item,'required');
+  return `<label class="field"><span class="label">权益项</span><select class="control" name="item" required>
+    ${option('','请选择',entry.item)}
+    <optgroup label="主套餐 · 直接开通">
+      ${[...planOpeningTiers].map(([key,tier])=>option(key,tier,entry.item)).join('')}
+    </optgroup>
+    <optgroup label="加油包 · 活动权益">
+      ${activityBenefitItems.map(([key,item])=>option(key,item.label,entry.item)).join('')}
+    </optgroup></select></label>`;
+}
+function planOpeningDays(entry) {
+  return Number(entry.term==='custom'?entry.customDays:entry.term);
+}
+function benefitFields(entry,canOpenPlan) {
+  const itemField=singleBenefitItemField(entry,canOpenPlan);
+  if (isPlanOpening(entry)) return commercialSection('主套餐开通',`<div class="form-grid two">
+    ${itemField}
+    ${select('term','有效期',[['30','30 天'],['365','365 天'],['custom','自定义天数']],entry.term)}
+    ${entry.term==='custom'?input('customDays','有效天数',entry.customDays,'type="number" min="1" max="1000" step="1"'):''}
+    <div class="wide">${input('planReason','开通原因',entry.planReason,'maxlength="100" placeholder="如：设备售后补偿"')}</div>
+  </div>`);
+  if (!isActivityBenefit(entry.item)&&!entry.id) return commercialSection('权益内容',`<div class="form-grid two">${itemField}</div>`);
+  const isCode=entry.method==='兑换码';
+  return `<div class="stack">${benefitContentFields(entry,itemField)}
+    ${commercialSection('发放方式',`${benefitMethodChoices(entry.method,'benefit-method','生成专属兑换码，导出后交给用户在 App 兑换')}
+    <div class="form-grid two form-space">${input('deadline',batchDeadlineLabel(entry)+'（UTC）',entry.deadline,'type="date" required')}
+      ${isCode?'<div class="readonly-box small">仅限该账号兑换 1 次</div>':input('limit','同账号限领次数',entry.limit,'type="number" min="1" required')}</div>`)}
   </div>`;
 }
-function benefitReview(entry,user) {
+function benefitReview(entry) {
+  if (isPlanOpening(entry)) {
+    const days=planOpeningDays(entry);
+    return commercialSection('确认开通主套餐',shoppingSummary([
+      ['套餐档位',planOpeningTiers.get(entry.item)],['有效期',days+' 天'],
+      ['预计到期时间',utcDisplay(new Date(Date.now()+days*DAY).toISOString().slice(0,16))],
+      ['开通原因',entry.planReason.trim()]
+    ]));
+  }
   const duplicate=benefitTasks.some(task=>task.id!==entry.id&&task.uid===entry.uid&&task.item===entry.item&&task.status==='发放完成');
   return `<div class="stack">${commercialSection('确认下发配置',shoppingSummary([
     ['任务名称',entry.name],['权益',benefitItems[entry.item].label],['数量或时长',benefitAmount(entry)],
-    ['发放方式',entry.method],['截止日期',entry.deadline],['限领',entry.limit+' 次'],['用途',entry.purpose],
-    ['预计生效',benefitTiming(entry,user)]
+    ['发放方式',entry.method],['截止日期',entry.deadline+' UTC'],['限领',entry.method==='兑换码'?'仅限指定账号兑换 1 次':entry.limit+' 次'],['用途',entry.purpose],
+    ['预计生效',benefitTiming(entry)]
   ]))}
     ${duplicate?'<div class="callout warn">该账号已有同类权益发放记录。请核对后再下发。</div>':''}
     <div class="callout">本次操作会生成演示任务和结果记录。</div></div>`;
@@ -1373,20 +1459,28 @@ function benefitReview(entry,user) {
 function renderBenefit(user) {
   if (!benefit||benefit.uid!==user.id) benefit=freshBenefit(user);
   const entry=benefit;
-  main.innerHTML=crumb('用户管理','权益下发',normalUserTitle)+pageHead(entry.id?'编辑权益下发':'权益下发',
-    `<a class="button" href="#/benefit-tasks/${user.id}">下发记录</a>`,'新增')+`
-    <div class="commercial-shell">${commercialSteps(['权益配置','预览并确认'],entry.step)}
-    <form id="benefit-form">
+  planOpenings=readStore(planOpenKey,planOpenings);
+  const planIneligible=planOpeningIssue(user);
+  const canOpenPlan=!entry.id&&!planIneligible;
+  if (!entry.step&&!canOpenPlan&&isPlanOpening(entry)) entry.item='';
+  const direct=isPlanOpening(entry);
+  const submitLabel=direct?'确认开通':entry.method==='兑换码'?'确认生成兑换码':'确认模拟下发';
+  main.innerHTML=crumb('用户管理','权益下发',normalUserTitle)+pageHead(entry.id?'编辑活动权益下发':'权益下发',
+    `<a class="button" href="#/benefit-tasks/${user.id}">活动下发记录</a>`,'新增')+`
+    <div class="commercial-shell">${commercialSteps(['配置权益','预览并确认'],entry.step)}
+    <form id="benefit-form" novalidate>
       <div class="commercial-layout">
-        ${entry.step?benefitReview(entry,user):benefitFields(entry)}
+        ${entry.step?benefitReview(entry):benefitFields(entry,canOpenPlan)}
         <aside class="panel commercial-section commercial-side"><h3>发放对象</h3>${shoppingSummary([
-          ['用户 ID',user.id],['邮箱',user.email],['区域',user.region],['产品线','观鸟线'],['归属','账号级']
-        ])}</aside>
+          ['用户 ID',user.id],['邮箱',user.email],['区域',user.region],['当前套餐',currentPlanText(user)],
+          ['主套餐开通',planIneligible?'当前不可开通':'符合资格'],['权益归属','观鸟线 · 账号级']
+        ])}${planIneligible?`<p class="form-text">${esc(planIneligible)}</p>`:''}</aside>
       </div>
       <div class="panel wizard-footer commercial-actions">
         <div><p class="error" id="benefit-error" ${entry.error?'':'hidden'}>${esc(entry.error)}</p><a class="small" href="#/users">返回用户列表</a></div>
-        <div class="button-row">${entry.step?button('上一步','benefit-back')+button('确认模拟下发','benefit-submit','primary'):
-          button('保存草稿','save-benefit-draft')+'<button class="button primary" type="submit">预览配置</button>'}</div>
+        <div class="button-row">${entry.step?button('上一步','benefit-back')+button(submitLabel,'benefit-submit','primary'):
+          (isActivityBenefit(entry.item)||entry.id?button('保存草稿','save-benefit-draft'):'')+
+          '<button class="button primary" type="submit">预览配置</button>'}</div>
       </div>
     </form></div>`;
 }
@@ -1396,18 +1490,29 @@ function collectBenefit() {
   Object.assign(benefit,formValues(form));
 }
 function validateBenefit(entry,partial=false) {
-  if (!canUseBenefit(memberById(entry.uid))) return '当前账号不可用。';
+  const user=memberById(entry.uid);
+  if (!canUseBenefit(user)) return '当前账号不可用。';
+  if (isPlanOpening(entry)) {
+    if (entry.id||partial) return '请从新建权益下发进行主套餐开通。';
+    planOpenings=readStore(planOpenKey,planOpenings);
+    const issue=planOpeningIssue(user);
+    if (issue) return issue;
+    const days=planOpeningDays(entry);
+    if (!Number.isInteger(days)||days<1||days>1000) return '有效天数须为 1–1000 的整数。';
+    return entry.planReason?.trim()?'':'请填写开通原因。';
+  }
+  if (!entry.item&&!partial) return '请选择权益项。';
   return validateBenefitConfig(entry,partial);
 }
 function validateBenefitConfig(entry,partial=false) {
   if (!entry.name.trim()) return '请输入任务名称。';
+  if (entry.item&&!isActivityBenefit(entry.item)) return '活动权益仅支持加油包，请重新选择权益。';
   if (partial) return '';
-  const item=benefitItems[entry.item];
-  if (!item || !entry.purpose.trim()) return '请选择权益并填写用途。';
-  const amount=Number(item.kind==='duration'?entry.duration:entry.quantity);
-  if (!Number.isInteger(amount)||amount<1) return '权益数量或时长须为大于 0 的整数。';
+  if (!isActivityBenefit(entry.item)||!entry.purpose.trim()) return '请选择权益并填写用途。';
+  const amount=Number(entry.quantity);
+  if (!Number.isInteger(amount)||amount<1) return '权益数量须为大于 0 的整数。';
   if (!entry.deadline||entry.deadline<isoToday()) return '领取或兑换截止日期须为今天或以后。';
-  if (!Number.isInteger(Number(entry.limit))||Number(entry.limit)<1) return '限领次数须为大于 0 的整数。';
+  if (entry.method!=='兑换码'&&(!Number.isInteger(Number(entry.limit))||Number(entry.limit)<1)) return '限领次数须为大于 0 的整数。';
   return '';
 }
 function benefitError(message) {
@@ -1427,7 +1532,7 @@ function taskRecord(entry,status,base) {
   const data={
     id,uid:entry.uid,name:entry.name.trim(),purpose:entry.purpose.trim(),item:entry.item,
     duration:entry.duration,unit:entry.unit,quantity:entry.quantity,method:entry.method,deadline:entry.deadline,
-    limit:entry.limit,created:base?.created||time,status,issued:status==='发放完成'?time:'',
+    limit:entry.method==='兑换码'?'1':entry.limit,created:base?.created||time,status,issued:status==='发放完成'?time:'',
     redemption:status==='发放完成'?(entry.method==='兑换码'?'未兑换':'未使用'):'—'
   };
   if (status==='发放完成'&&entry.method==='兑换码') data.code='DEMO-'+id.slice(3)+'-'+entry.uid.slice(2);
@@ -1439,18 +1544,19 @@ function saveBenefit(status) {
   collectBenefit();
   const error=validateBenefit(benefit,status==='草稿');
   if (error) {benefitError(error);return;}
+  if (isPlanOpening(benefit)) {savePlanOpening(benefit);return;}
   const existing=taskById(benefit.id);
   if (existing&&existing.status!=='草稿') {notify('该任务已处理');return;}
   const record=taskRecord(benefit,status,existing);
   benefit=null;
   benefitTaskFilter='';
   go('#/benefit-tasks/'+record.uid);
-  notify(status==='草稿'?'草稿已保存':'模拟下发完成');
+  notify(status==='草稿'?'草稿已保存':record.method==='兑换码'?'兑换码已生成，可在记录中导出':'模拟下发完成');
 }
 function benefitTaskActions(task) {
   return linkAction('查看','view-benefit-task',task.id)+
     (task.status==='草稿'?linkAction('编辑','edit-benefit-task',task.id)+(!validateBenefit(task)?linkAction('预览下发','run-benefit-task',task.id):'')+linkAction('删除','delete-benefit-task',task.id,'danger'):'')+
-    (task.status==='发放失败'?linkAction('重试','retry-benefit-task',task.id):'')+
+    (task.status==='发放失败'&&isActivityBenefit(task.item)?linkAction('重试','retry-benefit-task',task.id):'')+
     (task.code?linkAction('导出兑换码','export-benefit-code',task.id):'');
 }
 function renderBenefitTasks(user) {
@@ -1485,10 +1591,36 @@ function retryBenefitTask(task) {
   });
 }
 
+function planOpeningIssue(user) {
+  if (!canUseBenefit(user)) return '当前账号不可用。';
+  if (user.status==='订阅中') return '当前付费订阅仍有效。关闭自动续费的用户，到期前也不可开通主套餐。';
+  if (user.status==='试用中') return '当前试用仍有效，请在试用结束后核对开通资格。';
+  if (user.status!=='Free'||planOpenings.some(record=>record.uid===user.id))
+    return '该账号有到期或赠送套餐记录，开通资格待研发联调确认。';
+  return '';
+}
+function savePlanOpening(entry) {
+  const user=memberById(entry.uid);
+  const days=planOpeningDays(entry);
+  const now=new Date();
+  const record={uid:user.id,tier:planOpeningTiers.get(entry.item),days,reason:entry.planReason.trim(),
+    openedAt:now.toISOString(),endAt:new Date(now.getTime()+days*DAY).toISOString(),operator:'演示运营'};
+  const updated=[record,...planOpenings];
+  try {localStorage.setItem(planOpenKey,JSON.stringify(updated));}
+  catch {benefitError('开通记录保存失败，请重试。');return;}
+  planOpenings=updated;
+  applyPlanOpening(user,record);
+  benefit=null;
+  detailBack='#/users';
+  detailTab='plan';
+  go('#/users/'+user.id);
+  notify('主套餐已模拟开通');
+}
+
 const batchKey='parallens-review-batch-benefits-v1';
 const batchParent={label:'权益下发',url:'#/batch-benefits'};
 const batchSteps=['选择对象','配置权益','确认下发'];
-const batchStates=['待下发','发放完成','部分失败','发放失败'];
+const batchStates=['待下发','发放完成','部分失败','发放失败','已跳过'];
 const batchCodeStates={'待下发':'待生成','发放完成':'生成成功','发放失败':'生成失败'};
 const batchCodePath='运营导出兑换码并分发，用户在 App 输入兑换码完成兑换。';
 const batchSeeds=[{
@@ -1614,7 +1746,7 @@ function batchReview(entry) {
       ['任务名称',entry.name],['发放方式',entry.method],['权益',benefitItems[entry.item].label],['每账号数量或时长',benefitAmount(entry)],
       [isCode?'生成时间':'发放时间',entry.timing==='schedule'?utcDisplay(entry.scheduledAt):'立即'+action],[batchDeadlineLabel(entry),entry.deadline+' UTC'],
       [entry.method==='兑换码'?'兑换限制':'同账号限领',entry.method==='兑换码'?'每账号 1 枚，仅限本人兑换 1 次':entry.limit+' 次'],
-      ['用途',entry.purpose],['权益生效',benefitItems[entry.item].kind==='duration'?'用户使用或兑换后，已有生效套餐的账号到期后顺延':'到账规则按权益类型确认']
+      ['用途',entry.purpose],['权益生效',benefitTiming(entry)]
     ]))}
     ${commercialSection(isCode?'确认适用名单':'确认发放名单',batchAccountPreview(entry.report,isCode))}
     <div class="callout">确认后锁定名单。${isCode?batchCodePath:'优惠券发到 App 的「我的优惠券」。'}</div>
@@ -1703,6 +1835,7 @@ function confirmBatch(entry) {
     method:entry.method,purpose:entry.purpose.trim(),deadline:entry.deadline,limit:entry.method==='兑换码'?'1':entry.limit,region:entry.region,
     scheduledAt:entry.timing==='schedule'?entry.scheduledAt:'',created:timestamp(),issued:'',
     runAt:entry.timing==='schedule'?atUtc(entry.scheduledAt):Date.now()+700,
+    sourceGroupId:entry.source==='group'?entry.groupId:'',
     sourceLabel:report.sourceLabel,inputCount:report.inputCount,duplicates:report.duplicates,excluded:report.excluded,
     recipients:report.accounts.map(user=>({uid:user.id,region:user.region,state:'待下发',attempts:0,reason:''}))
   };
@@ -1714,8 +1847,10 @@ function confirmBatch(entry) {
 }
 function batchStatus(task) {
   if(!task.issued) return '待下发';
+  const skipped=task.recipients.filter(row=>row.state==='已跳过').length;
   const failed=task.recipients.filter(row=>row.state==='发放失败').length;
-  return failed===0?'发放完成':failed===task.recipients.length?'发放失败':'部分失败';
+  if(skipped===task.recipients.length) return '已跳过';
+  return failed+skipped===0?'发放完成':failed+skipped===task.recipients.length?'发放失败':'部分失败';
 }
 function batchStateLabel(task,state) {
   return task.method==='兑换码'?(batchCodeStates[state]||state):state;
@@ -1740,9 +1875,16 @@ function finishBatchRecipient(task,row,issuedAt,reason='') {
 }
 function batchRedemption(task,row) {
   if(row.state!=='发放完成') return '—';
-  if(task.method==='兑换码'&&row.redeemedAt) return '已兑换';
+  if(row.redeemedAt) return task.method==='兑换码'?'已兑换':'已使用';
   if(task.deadline<isoToday()) return '已过期';
   return task.method==='兑换码'?'未兑换':'未使用';
+}
+function checkBatchRecipient(task,row) {
+  const account=memberById(row.uid);
+  if(!isActivityBenefit(task.item)) return '活动权益仅支持独立加油包';
+  if(!canUseBenefit(account)||task.region&&task.region!==account.region) return '账号不在可发放范围';
+  if(task.deadline<isoToday()) return batchDeadlineLabel(task)+'已过';
+  return '';
 }
 function processBatchQueue() {
   batchTasks=readStore(batchKey,batchSeeds);
@@ -1751,8 +1893,9 @@ function processBatchQueue() {
   if(due.length) {
     const issued=timestamp();
     const tasks=batchTasks.map(task=>due.includes(task)?{...task,issued,recipients:task.recipients.map((row,index)=>{
-      const expired=task.deadline<isoToday();
-      const reason=expired?batchDeadlineLabel(task)+'已过':index===1?(task.method==='兑换码'?'模拟生成接口超时':'模拟发放接口超时'):'';
+      const issue=checkBatchRecipient(task,row);
+      if(issue) return {...row,state:'已跳过',reason:issue};
+      const reason=index===1?(task.method==='兑换码'?'模拟生成接口超时':'模拟发放接口超时'):'';
       return finishBatchRecipient(task,row,issued,reason);
     })}:task);
     if(!persistBatchTasks(tasks)) return;
@@ -1788,10 +1931,10 @@ function renderBatchDetail(task) {
   const failures=task.recipients.filter(row=>row.state==='发放失败').length;
   const output=task.recipients.filter(row=>!batchResultFilter||row.state===batchResultFilter);
   const status=batchStatus(task);
-  const canRetry=failures&&task.deadline>=isoToday();
+  const canRetry=failures&&isActivityBenefit(task.item)&&task.deadline>=isoToday();
   const title=isCode?'批量兑换码详情':'批量下发详情';
   const resultLabel=isCode?'生成结果':'下发结果';
-  const filters=['待下发','发放完成','发放失败'].map(state=>[state,batchStateLabel(task,state)]);
+  const filters=['待下发','发放完成','发放失败','已跳过'].map(state=>[state,batchStateLabel(task,state)]);
   main.innerHTML=crumb('运营管理',title,batchParent)+pageHead(title,
     '<a class="button" href="#/batch-benefits">返回下发任务</a>'+
     (canExport?button('导出兑换码','export-batch-codes'): '')+
@@ -1799,10 +1942,11 @@ function renderBatchDetail(task) {
     `<div class="commercial-shell commercial-layout"><div class="stack">
       ${commercialSection(resultLabel,`<div class="split batch-result-heading"><strong>${esc(task.name)}</strong>${batchStatusTag(task,status)}</div>
         ${isCode?`<p class="form-text">${batchCodePath}</p>`:''}
-        <div class="batch-counts" aria-label="${isCode?'生成统计':'下发统计'}">
+        <div class="batch-counts execution" aria-label="${isCode?'生成统计':'下发统计'}">
           <div><span>${isCode?'适用账号':'目标账号'}</span><strong>${task.recipients.length}</strong></div>
           <div><span>${isCode?'已生成':'成功'}</span><strong>${successes}</strong></div>
           <div><span>${isCode?'生成失败':'失败'}</span><strong>${failures}</strong></div>
+          <div><span>跳过</span><strong>${task.recipients.filter(row=>row.state==='已跳过').length}</strong></div>
         </div>
         <div class="batch-result-filter">${select('result',isCode?'生成状态':'账号发放状态',[all('全部'),...filters],batchResultFilter,'data-batch-result')}</div>
         <div class="batch-result-table">${table([isCode?'适用用户 ID':'用户 ID','地区',isCode?'生成结果':'发放结果',isCode?'兑换状态':'领取状态',
@@ -1823,7 +1967,7 @@ function renderBatchDetail(task) {
 }
 function retryBatch(id) {
   const task=batchById(id);
-  if(!task||task.deadline<isoToday()) return;
+  if(!task||!isActivityBenefit(task.item)||task.deadline<isoToday()) return;
   const failures=task.recipients.filter(row=>row.state==='发放失败').length;
   if(!failures) return;
   const isCode=task.method==='兑换码';
@@ -1833,9 +1977,11 @@ function retryBatch(id) {
     const row=latest.find(record=>record.id===id);
     if(!row||row.deadline<isoToday()) {notify('任务有效期已过。','warning');return;}
     const retried=timestamp();
-    const tasks=latest.map(record=>record.id===id?{...record,retried,recipients:record.recipients.map(member=>
-      member.state==='发放失败'?finishBatchRecipient(record,member,retried):member
-    )}:record);
+    const tasks=latest.map(record=>record.id===id?{...record,retried,recipients:record.recipients.map(member=>{
+      if(member.state!=='发放失败') return member;
+      const issue=checkBatchRecipient(record,member);
+      return issue?{...member,state:'已跳过',reason:issue}:finishBatchRecipient(record,member,retried);
+    })}:record);
     if(!persistBatchTasks(tasks)) return false;
     batchResultFilter='';render();notify('模拟重试完成');
   });
@@ -1854,11 +2000,12 @@ function exportBatchCodes(id) {
   render();notify('已导出 '+rows.length+' 枚兑换码');
 }
 function userGiftRows(user) {
-  const received=benefitTasks.filter(task=>task.uid===user.id&&task.status==='发放完成')
-    .map(task=>({task,time:task.issued,source:'单人'+task.method,state:task.redemption}));
+  const received=benefitTasks.filter(task=>task.uid===user.id&&task.status==='发放完成'&&
+    (task.redeemedAt||['已使用','已兑换'].includes(task.redemption)))
+    .map(task=>({task,time:task.redeemedAt||task.issued,source:'单人'+task.method,state:task.redemption}));
   for(const task of batchTasks) {
     const row=task.recipients.find(member=>member.uid===user.id&&member.state==='发放完成');
-    if(!row||(task.method==='兑换码'&&!row.redeemedAt)) continue;
+    if(!row?.redeemedAt) continue;
     received.push({task,time:row.redeemedAt||row.issuedAt||task.issued,source:'批量'+task.method,state:batchRedemption(task,row)});
   }
   const rows=received.sort((a,b)=>b.time.localeCompare(a.time)).map(({task,time,source,state})=>{
@@ -1867,164 +2014,209 @@ function userGiftRows(user) {
     return [item.label+(duration?'':' · '+benefitAmount(task)),source+' · '+task.id,time,'—',
       duration?benefitAmount(task):'—',state,'—'];
   });
-  if(user.id==='PL1001'||user.id==='PL1005') {
-    rows.push(['Plus 套餐','客服补偿','2026-11-18','—','30 天','待生效','—'],
-      ['AI 次数包','权益包购买','2026-11-16','3.99 USD','月付','已生效','32 次']);
-  }
+  const opened=planOpenings.filter(record=>record.uid===user.id);
+  for (const record of opened) rows.push([
+    record.tier+' 套餐','Plan 手动开通 · '+record.operator,utcDisplay(record.openedAt.slice(0,16)),'—',
+    record.days+' 天 · 至 '+utcDisplay(record.endAt.slice(0,16)),Date.parse(record.endAt)>Date.now()?'已生效':'已到期','—'
+  ]);
+  if (user.giftDays&&!opened.length) rows.push([user.tier+' 套餐','Plan 手动开通','2026-11-18','—',user.giftDays+' 天','已生效','—']);
   return rows;
 }
 
-const planCatalogPages=['My Plan','Subscription','Explore'];
-const planKey='parallens-review-plans-v1';
-const planSeeds=[
- {id:'P-1001',family:'P-1001',name:'Bird Plus 月付',line:'观鸟线',sku:'BIRD-PLUS-M',region:'北美',series:'',access:'all',groupId:'',status:'已上架',mode:'立即上架',startAt:'2026-11-18T08:00',endAt:'',limited:'no',trial:'yes',position:'1',display:'My Plan',jump:'',version:1,log:[['2026-11-18 08:00 UTC','上架']]},
- {id:'P-1002',family:'P-1002',name:'Bird Pro 年付优惠',line:'观鸟线',sku:'BIRD-PRO-Y',region:'欧洲',series:'K3',access:'group',groupId:'G001',status:'待上架',mode:'定时上架',startAt:isoToday(12)+'T08:00',endAt:isoToday(25)+'T08:00',limited:'yes',trial:'no',position:'2',display:'Subscription',jump:'',version:1,log:[['2026-11-19 10:15 UTC','定时上架']]},
- {id:'P-1003',family:'P-1003',name:'Bird Pro 月付',line:'观鸟线',sku:'BIRD-PRO-M',region:'全部',series:'Q5',access:'all',groupId:'',status:'草稿',mode:'立即上架',startAt:'',endAt:'',limited:'no',trial:'yes',position:'3',display:'My Plan',jump:'',version:1,log:[['2026-11-20 06:10 UTC','保存草稿']]}
+const planCatalogPages=['My Plan','Subscription'];
+const planTypes=['常规套餐','档位升级','周期变更','到期回流'];
+const planCatalog=[
+  ...planSkus.filter(sku=>sku.line==='观鸟线').map(sku=>({
+    id:sku.id,type:'常规套餐',target:sku.id,label:sku.tier+' '+sku.cycle,
+    eligibility:'按 App 现有常规套餐购买规则',markets:regions,ready:true
+  })),
+  {id:'upgrade-month',type:'档位升级',source:'BIRD-PLUS-M',target:'BIRD-PRO-M',
+    eligibility:'Plus 月付已付费，且当前订阅仍有效',markets:regions,ready:true},
+  {id:'upgrade-year',type:'档位升级',source:'BIRD-PLUS-M',target:'BIRD-PRO-Y',
+    eligibility:'Plus 月付已付费，且当前订阅仍有效',markets:regions,ready:true},
+  {id:'cycle-year',type:'周期变更',source:'BIRD-PLUS-M',target:'BIRD-PLUS-Y',
+    eligibility:'Plus 月付已付费，且当前订阅仍有效',markets:regions,ready:true},
+  {id:'cycle-pro-year',type:'周期变更',source:'BIRD-PRO-M',target:'BIRD-PRO-Y',
+    eligibility:'Pro 月付已付费，且当前订阅仍有效',markets:regions,ready:true},
+  {id:'winback-plus',type:'到期回流',source:'BIRD-PLUS-M',target:'BIRD-PLUS-M',
+    eligibility:'曾付费订阅 Plus 月付，已实际到期，并符合回流资格',markets:regions,ready:true},
+  {id:'winback-pro',type:'到期回流',source:'BIRD-PRO-Y',target:'BIRD-PRO-Y',
+    eligibility:'曾付费订阅 Pro 年付，已实际到期，并符合回流资格',markets:[],ready:false}
 ];
-let plans=readStore(planKey,planSeeds);
+const planKey='parallens-shelf-placements-v1';
+const planSeeds=[
+  {id:'P-1001',name:'观鸟常规套餐 · Plus 月付',type:'常规套餐',offering:'BIRD-PLUS-M',region:'北美',
+    display:'My Plan',mode:'立即上架',startAt:isoToday(-7)+'T08:00',endAt:'',
+    status:'已上架',log:[[isoToday(-7)+' 08:00 UTC','立即上架']]},
+  {id:'P-1002',name:'观鸟升级 · Pro 月付',type:'档位升级',offering:'upgrade-month',region:'北美',
+    display:'Subscription',mode:'定时上架',startAt:isoToday(7)+'T08:00',endAt:isoToday(21)+'T08:00',
+    status:'待上架',log:[[isoToday(-2)+' 09:20 UTC','定时上架']]},
+  {id:'P-1003',name:'观鸟转年付 · Plus 年付',type:'周期变更',offering:'cycle-year',region:'欧洲',
+    display:'My Plan',mode:'立即上架',startAt:'',endAt:'',status:'草稿',log:[[isoToday(-1)+' 10:30 UTC','保存草稿']]},
+  {id:'P-1004',name:'观鸟回流 · Plus 月付',type:'到期回流',offering:'winback-plus',region:'全量',
+    display:'Subscription',mode:'定时上架',startAt:isoToday(-14)+'T08:00',endAt:isoToday(-1)+'T08:00',
+    status:'已下架',log:[[isoToday(-15)+' 16:00 UTC','定时上架'],[isoToday(-1)+' 08:00 UTC','定时下架']]}
+];
+let plans=readStore(planKey,null);
+if (!plans) {
+  plans=planSeeds;
+  writeStore(planKey,plans);
+}
 let planDraft=null;
 const planById=id=>plans.find(plan=>plan.id===id);
 const planSku=id=>planSkus.find(sku=>sku.id===id);
-const planGroup=id=>groupById(id);
-function planPrice(plan) {
-  const sku=planSku(plan.sku);
-  return !sku?'—':plan.region==='全部' ? Object.values(sku.prices).join(' / ') : sku.prices[plan.region]||'—';
-}
+const planOffering=id=>planCatalog.find(item=>item.id===id);
 function atUtc(dateTime) {return dateTime ? Date.parse(dateTime+'Z') : NaN;}
 function utcDisplay(value) {return value ? value.replace('T',' ')+' UTC':'—';}
-function planFamilyVersion(family) {return Math.max(0,...plans.filter(plan=>plan.family===family).map(plan=>plan.version))+1;}
+function planSkuLabel(id) {
+  const sku=planSku(id);
+  return sku?sku.tier+' '+sku.cycle:'—';
+}
+function planPath(item) {
+  if (!item) return '—';
+  if (item.type==='到期回流') return planSkuLabel(item.source)+'到期 → 重新订阅 '+planSkuLabel(item.target);
+  return item.source?planSkuLabel(item.source)+' → '+planSkuLabel(item.target):planSkuLabel(item.target);
+}
+function planPrice(item,region) {
+  if (!item) return '—';
+  if (item.type!=='常规套餐') return '待定';
+  const prices=planSku(item.target).prices;
+  if (region==='全量') return item.markets.map(market=>prices[market]).filter(Boolean).join(' / ')||'—';
+  return prices[region]||'—';
+}
+function planRegionChoices(item) {
+  return item?.markets.length?['全量',...item.markets]:[];
+}
 function updatePlanStatuses() {
   const now=Date.now();
   let changed=false;
   for (const entry of plans) {
-    const group=planGroup(entry.groupId);
-    if (entry.status==='待上架' && atUtc(entry.startAt)<=now && (!entry.groupId||group && group.status!=='已停用' && !group.failed)) {
-      entry.status='已上架';entry.log.push([timestamp(),'定时上架生效']);changed=true;
+    if (entry.status==='待上架' && atUtc(entry.startAt)<=now) {
+      entry.status='已上架';
+      entry.log.push([utcDisplay(entry.startAt),'定时上架']);
+      changed=true;
     }
     if (entry.status==='已上架' && atUtc(entry.endAt)<=now) {
-      entry.status='已下架';entry.log.push([timestamp(),'定时下架生效']);changed=true;
+      entry.status='已下架';
+      entry.log.push([utcDisplay(entry.endAt),'定时下架']);
+      changed=true;
     }
   }
   if (changed) writeStore(planKey,plans);
 }
 function filterPlans(query) {
-  return plans.filter(plan=> (includes(plan.name,query.name)||includes(plan.sku,query.name)) &&
-    (!query.line||plan.line===query.line) && (!query.region||plan.region===query.region||plan.region==='全部') &&
+  return plans.filter(plan=> (includes(plan.name,query.name)||includes(plan.id,query.name)) &&
+    (!query.type||plan.type===query.type) &&
+    (!query.region||plan.region===query.region||plan.region==='全量'&&planOffering(plan.offering)?.markets.includes(query.region)) &&
     (!query.status||plan.status===query.status));
 }
 function planStatusTag(status) {
-  return tag(status,{'已上架':'green','待上架':'orange','已下架':'','草稿':''}[status]||'');
+  return tag(status,{'已上架':'green','待上架':'orange'}[status]||'');
 }
 function planActions(plan) {
-  let extra='';
-  if (plan.status==='草稿') extra=linkAction('编辑','edit-plan',plan.id)+linkAction('删除','delete-plan',plan.id,'danger');
-  if (plan.status==='已上架') extra=linkAction('下架','off-plan',plan.id,'danger');
-  if (plan.status==='待上架') extra=linkAction('取消定时','cancel-plan',plan.id);
-  if (plan.status==='已下架') extra=linkAction('编辑新版本','reissue-plan',plan.id);
-  return linkAction('查看','view-plan',plan.id)+extra;
+  const view=linkAction('查看','view-plan',plan.id);
+  if (plan.status==='草稿') return view+linkAction('编辑','edit-plan',plan.id)+linkAction('删除','delete-plan',plan.id,'danger');
+  if (plan.status==='已上架') return view+linkAction('下架','off-plan',plan.id,'danger');
+  if (plan.status==='待上架') return view+linkAction('取消定时','cancel-plan',plan.id);
+  return view+linkAction('复制新建','reissue-plan',plan.id);
 }
 function renderPlans() {
   updatePlanStatuses();
   const q=scope.plans;
   const data=filterPlans(applied.plans);
-  const rows=pageOf('plans',data).map(plan=>[
-    htmlCell(`<strong>${esc(plan.name)}</strong><div class="small muted">${esc(plan.sku||'未选 SKU')} · V${plan.version}</div>`),
-    plan.line,plan.region,planPrice(plan),planSku(plan.sku)?.cycle||'—',
-    plan.access==='group'?planGroup(plan.groupId)?.name||'分组不可用':'全部可见',
-    htmlCell(planStatusTag(plan.status)+(plan.access==='group'&&(!planGroup(plan.groupId)||planGroup(plan.groupId).status==='已停用'||planGroup(plan.groupId).failed)?' '+tag('分组不可用','orange'):'')),plan.mode,plan.position,
-    htmlCell(planActions(plan),'actions')
-  ]);
-  main.innerHTML=crumb('运营管理','套餐配置')+pageHead('套餐配置',button('＋ 新建套餐','new-plan','primary'))+`
+  const rows=pageOf('plans',data).map(plan=>{
+    const item=planOffering(plan.offering);
+    return [
+      htmlCell('<strong>'+esc(plan.name)+'</strong><div class="small muted">'+esc(plan.id)+'</div>','wrap'),
+      plan.type,htmlCell(esc(planPath(item)),'wrap'),
+      htmlCell(esc(plan.display||'—')+'<div class="small muted">'+esc(plan.region||'未选地区')+'</div>','wrap'),
+      htmlCell(plan.startAt||plan.endAt?esc(utcDisplay(plan.startAt))+'<div class="small muted">至 '+esc(plan.endAt?utcDisplay(plan.endAt):'手动下架')+'</div>':'—','wrap'),
+      htmlCell(planStatusTag(plan.status)),htmlCell(planActions(plan),'actions')
+    ];
+  });
+  main.innerHTML=crumb('运营管理','套餐配置')+pageHead('套餐配置',button('＋ 新建上架配置','new-plan','primary'))+`
     <form class="panel filters" data-search="plans"><div class="filter-top">
-      ${input('name','套餐名称 / SKU',q.name,'placeholder="请输入"')}
-      ${select('line','产品线',[all('全部'),'观鸟线','狩猎线'],q.line)}
-      ${select('region','区域',[all('全部'),...regions],q.region)}
+      ${input('name','配置名称 / 编号',q.name,'placeholder="请输入"')}
+      ${select('type','商品 / 优惠类型',[all('全部'),...planTypes],q.type)}
+      ${select('region','展示地区',[all('全部'), '全量',...regions],q.region)}
       ${select('status','状态',[all('全部'),'草稿','待上架','已上架','已下架'],q.status)}
       </div><div class="button-row filter-actions"><button type="submit" class="button primary">搜索</button>${button('重置','reset-plans')}</div>
       <p class="error" data-filter-error hidden></p></form>
-    <section class="panel" aria-label="套餐列表">${table(['套餐名称','产品线','区域','价格','周期','定向分组','状态','上架方式','排序',{html:'操作',cls:'actions'}],rows)}
+    <section class="panel" aria-label="套餐配置列表">${table(['配置名称','商品 / 优惠类型','套餐路径','展示页面 / 地区','排期（UTC）','状态',{html:'操作',cls:'actions'}],rows)}
       ${pager('plans',data.length)}</section>`;
 }
 function freshPlan() {
-  return {id:'',family:'',name:'',line:'观鸟线',sku:'',region:'全部',series:'',access:'all',groupId:'',
-    mode:'立即上架',startAt:'',endAt:'',limited:'no',trial:'no',position:'1',display:'My Plan',jump:'',version:1,log:[],step:0,error:''};
+  return {id:'',name:'',type:'档位升级',offering:'',region:'',display:'My Plan',
+    mode:'立即上架',startAt:'',endAt:'',log:[],step:0,error:''};
 }
-function startPlan(entry=null,version=false) {
-  if (entry) {
-    planDraft={...entry,step:0,error:''};
-    if (version) {
-      planDraft.id='';
-      planDraft.version=planFamilyVersion(entry.family);
-      planDraft.mode='立即上架';planDraft.startAt='';planDraft.endAt='';planDraft.log=[];
-    }
-  } else planDraft=freshPlan();
+function startPlan(entry=null,copy=false) {
+  planDraft=entry?{...entry,step:0,error:''}:freshPlan();
+  if (copy) Object.assign(planDraft,{id:'',name:entry.name+'（副本）',startAt:'',endAt:'',log:[]});
   go('#/plans/edit');
 }
-function groupForPlan(entry,group) {
-  return entry.line==='观鸟线' &&
-    (!entry.series || !group.series || group.series===entry.series);
+function planOfferingField(entry) {
+  const options=planCatalog.filter(item=>item.type===entry.type).map(item=>{
+    const label=item.label||planPath(item);
+    if (!item.ready) return '<option disabled>'+esc(label+'（待双端联调）')+'</option>';
+    return option(item.id,label,entry.offering);
+  });
+  return '<label class="field"><span class="label">已联调商品 / 优惠</span><select class="control" name="offering" required>'+
+    option('','请选择',entry.offering)+options.join('')+'</select></label>';
 }
 function planForm(entry) {
-  const sku=planSku(entry.sku);
-  const productChoices=planSkus.filter(row=>row.line===entry.line).map(row=>[row.id,row.id+' · '+row.tier+' '+row.cycle]);
-  const groupChoices=groups.filter(group=>group.id===entry.groupId||groupForPlan(entry,group)&&group.status!=='已停用')
-    .map(group=>[group.id,group.name+(group.status==='已停用'?'（已停用）':group.failed?'（计算失败）':'')]);
-  const scheduled=entry.mode==='定时上架'||entry.limited==='yes';
+  const markets=planRegionChoices(planOffering(entry.offering));
   return `<div class="stack">
-    ${commercialSection('商品信息',`<div class="form-grid two">
-      ${input('name','套餐名称',entry.name,'maxlength="60" required placeholder="请输入用于后台识别的名称"')}
-      ${select('line','产品线',['观鸟线','狩猎线'],entry.line)}
-      ${select('sku','已配置的内购 SKU',[all('请选择'),...productChoices],entry.sku,'required')}
-      ${select('region','适用区域',['全部',...regions],entry.region)}
-      ${entry.line==='观鸟线'?select('series','产品系列',[all('全部系列'),...seriesOptions],entry.series):''}
-      ${input('sku-price','SKU 价格与周期',sku?planPrice(entry)+' · '+sku.cycle:'选择 SKU 后显示','readonly')}
+    ${commercialSection('商品与优惠',`<div class="form-grid two">
+      <div class="wide">${input('name','配置名称',entry.name,'maxlength="60" required placeholder="仅后台可见"')}</div>
+      ${select('type','商品 / 优惠类型',planTypes,entry.type)}
+      ${planOfferingField(entry)}
     </div>`)}
-    ${commercialSection('展示与可见范围',`<div class="form-grid two">
-      ${select('access','可见范围',[['all','全部可见'],['group','定向分组']],entry.access)}
-      ${entry.access==='group'?select('groupId','用户分组',[all('请选择'),...groupChoices],entry.groupId,'required'):''}
-      ${input('position','货架排序',entry.position,'type="number" min="1" required')}
+    ${commercialSection('展示设置',`<div class="form-grid two">
+      ${select('region','展示地区',[all(markets.length?'请选择':'先选择商品或优惠'),...markets],entry.region,markets.length?'required':'disabled')}
       ${select('display','展示页面',planCatalogPages,entry.display)}
-      ${input('jump','跳转链接',entry.jump,'type="url" placeholder="选填 https://…"')}
-    </div>${entry.access==='group'&&entry.line!=='观鸟线'?'<p class="form-text">当前分组库提供观鸟线分组。</p>':''}`)}
-    ${commercialSection('上架与活动',`<div class="form-grid two">
-      ${select('limited','套餐类型',[['no','常规套餐'],['yes','限定套餐']],entry.limited)}
-      ${select('trial',entry.line==='观鸟线'?'7 天试用':'14 天新手体验',[['no','关闭'],['yes','开启']],entry.trial)}
-      ${entry.limited==='yes'?input('mode-label','上架方式','定时上架','readonly'):
-        select('mode','上架方式',['立即上架','定时上架'],entry.mode)}
-      ${scheduled?input('startAt','上架时间（UTC）',entry.startAt,'type="datetime-local" required'):''}
-      ${input('endAt','下架时间（UTC）',entry.endAt,'type="datetime-local" '+(entry.limited==='yes'?'required':''))}
-    </div>`)}
+    </div>${entry.region==='全量'?'<p class="form-text">覆盖所选商品或优惠的全部双端可售地区。</p>':''}`)}
+    ${commercialSection('上下架排期',`<div class="form-grid two">
+      ${select('mode','上架方式',['立即上架','定时上架'],entry.mode)}
+      ${entry.mode==='定时上架'?input('startAt','上架时间（UTC）',entry.startAt,'type="datetime-local" required'):''}
+      ${input('endAt','下架时间（UTC）',entry.endAt,'type="datetime-local"')}
+    </div><p class="form-text">下架时间留空时，可在列表中手动下架。</p>`)}
   </div>`;
 }
 function planReview(entry) {
-  return `<div class="stack">
-    ${commercialSection('确认上架配置',shoppingSummary([
-      ['套餐名称',entry.name],['产品线',entry.line],['地区',entry.region],['系列',entry.series||'全部'],
-      ['SKU',entry.sku],['价格与周期',planPrice(entry)+' · '+planSku(entry.sku).cycle],
-      ['可见范围',entry.access==='group'?planGroup(entry.groupId)?.name:'全部可见'],
-      ['排序',entry.position],['展示页面',entry.display],['跳转链接',entry.jump],['上架方式',entry.mode],
-      ['上架时间',entry.mode==='定时上架'?utcDisplay(entry.startAt):'确认后上架'],
-      ['下架时间',utcDisplay(entry.endAt)],['试用或体验',entry.trial==='yes'?'开启':'关闭']
-    ]))}
-    <div class="callout">确认后更新演示货架状态。</div></div>`;
+  return commercialSection('确认展示设置',shoppingSummary([
+    ['配置名称',entry.name],['商品 / 优惠类型',entry.type],['展示地区',entry.region],['展示页面',entry.display],
+    ['上架时间',entry.mode==='定时上架'?utcDisplay(entry.startAt):'确认后立即上架'],
+    ['下架时间',entry.endAt?utcDisplay(entry.endAt):'手动下架']
+  ]));
+}
+function planOfferingSummary(entry) {
+  const item=planOffering(entry.offering);
+  if (!item) return '<p class="form-text">选择商品或优惠后，查看购买资格及双端状态。</p>';
+  const status=item.ready?'已联调':'待联调';
+  const priceLabel=item.type==='常规套餐'?'示例价格':'优惠价';
+  return `<div class="plan-eligibility"><span class="muted small">购买资格</span><strong>${esc(item.eligibility)}</strong></div>
+    ${shoppingSummary([
+      ['套餐路径',planPath(item)],['目标套餐',planSkuLabel(item.target)],[priceLabel,planPrice(item,entry.region)],
+      ['双端可售地区',item.markets.join('、')]
+    ])}
+    <div class="plan-platforms" aria-label="双端状态"><div><span>iOS</span>${tag(status,item.ready?'green':'orange')}</div>
+      <div><span>Google Play</span>${tag(status,item.ready?'green':'orange')}</div></div><p class="form-text">联调状态和可售地区为演示数据。</p>`;
 }
 function renderPlanEditor() {
   if (!planDraft) planDraft=freshPlan();
   const entry=planDraft;
-  const name=entry.id?'编辑套餐':entry.family?'编辑套餐新版本':'新建套餐';
+  const name=entry.id?'编辑上架配置':'新建上架配置';
   const parent={label:'套餐配置',url:'#/plans'};
   main.innerHTML=crumb('运营管理',name,parent)+pageHead(name)+`
-    <div class="commercial-shell">${commercialSteps(['配置套餐','预览上架'],entry.step)}
+    <div class="commercial-shell">${commercialSteps(['填写配置','预览上架'],entry.step)}
     <form id="plan-form">
     <div class="commercial-layout">
       ${entry.step?planReview(entry):planForm(entry)}
-      <aside class="panel commercial-section commercial-side"><h3>商品映射</h3>${shoppingSummary([
-        ['产品线',entry.line],['SKU',entry.sku],['档位',planSku(entry.sku)?.tier],
-        ['周期',planSku(entry.sku)?.cycle],['当前价格',planPrice(entry)],['货架版本','V'+entry.version]
-      ])}</aside>
+      <aside class="panel commercial-section commercial-side"><h3>商品与购买资格</h3>${planOfferingSummary(entry)}</aside>
     </div>
     <div class="panel wizard-footer commercial-actions">
-      <div><p class="error" id="plan-error" ${entry.error?'':'hidden'}>${esc(entry.error)}</p><a class="small" href="#/plans">返回套餐配置</a></div>
+      <div><p class="error" id="plan-error" role="alert" ${entry.error?'':'hidden'}>${esc(entry.error)}</p>
+        <a class="small" href="#/plans">返回套餐配置</a></div>
       <div class="button-row">${entry.step?button('上一步','plan-back')+button(entry.mode==='定时上架'?'确认定时上架':'确认上架','publish-plan','primary'):
         button('保存草稿','save-plan-draft')+'<button class="button primary" type="submit">预览上架</button>'}</div>
     </div>
@@ -2032,81 +2224,79 @@ function renderPlanEditor() {
 }
 function collectPlan() {
   const form=main.querySelector('#plan-form');
-  if (!form||planDraft.step) return;
-  Object.assign(planDraft,formValues(form));
-  if(planDraft.limited==='yes') planDraft.mode='定时上架';
+  if (form && !planDraft.step) Object.assign(planDraft,formValues(form));
 }
 function validatePlan(entry,partial=false) {
-  if (!entry.name.trim()) return '请输入套餐名称。';
+  if (!entry.name.trim()) return '请输入配置名称。';
   if (partial) return '';
-  if (planSku(entry.sku)?.line!==entry.line) return '请选择适用的内购 SKU。';
-  if (entry.access==='group') {
-    const group=planGroup(entry.groupId);
-    if (!group||!groupForPlan(entry,group)||group.status==='已停用'||group.failed) return '所选分组不可用，请更换分组后再上架。';
-  }
-  const when=atUtc(entry.startAt), end=atUtc(entry.endAt), now=Date.now();
-  if (entry.mode==='定时上架'&&!(when>now)) return '定时上架时间须晚于当前 UTC 时间。';
-  if (entry.limited==='yes' && !entry.endAt) return '限定套餐须设置下架时间。';
-  if (entry.endAt && !(end>(entry.mode==='定时上架'?when:now))) return '下架时间须晚于上架时间。';
-  if (!Number.isInteger(Number(entry.position))||Number(entry.position)<1) return '排序须为大于 0 的整数。';
-  if (entry.jump&&!/^https?:\/\//i.test(entry.jump)) return '请输入有效的 HTTP 或 HTTPS 链接。';
+  const item=planOffering(entry.offering);
+  if (!item?.ready||item.type!==entry.type) return '请选择已完成双端联调的商品或优惠。';
+  if (!planRegionChoices(item).includes(entry.region)) return '请选择双端均可售的地区。';
+  if (!planCatalogPages.includes(entry.display)) return '请选择有效的 App 展示页面。';
+  const start=entry.mode==='定时上架'?atUtc(entry.startAt):Date.now();
+  if (entry.mode==='定时上架'&&!(start>Date.now())) return '定时上架时间须晚于当前 UTC 时间。';
+  if (entry.endAt && !(atUtc(entry.endAt)>start)) return '下架时间须晚于上架时间。';
   return '';
 }
 function planError(message) {
   planDraft.error=message;
   const error=main.querySelector('#plan-error');
-  error.textContent=message;error.hidden=!message;
+  error.textContent=message;
+  error.hidden=!message;
 }
 function previewPlan() {
   collectPlan();
   const error=validatePlan(planDraft);
   if (error) {planError(error);return;}
-  planDraft.step=1;planDraft.error='';renderPlanEditor();
+  planDraft.step=1;
+  planDraft.error='';
+  renderPlanEditor();
 }
 function savePlan(publish) {
   collectPlan();
   const draft=planDraft;
   const error=validatePlan(draft,!publish);
   if (error) {planError(error);return;}
-  if (draft.id && planById(draft.id)?.status!=='草稿') {notify('该套餐状态已变化，请回到列表');return;}
+  if (draft.id && planById(draft.id)?.status!=='草稿') {notify('该配置状态已变化，请回到列表');return;}
   const id=draft.id||'P-'+(Math.max(1000,...plans.map(plan=>Number(plan.id.slice(2))))+1);
   const status=!publish?'草稿':draft.mode==='定时上架'?'待上架':'已上架';
   const time=timestamp();
-  const entry={
-    id,family:draft.family||id,name:draft.name.trim(),line:draft.line,sku:draft.sku,region:draft.region,
-    series:draft.line==='观鸟线'?draft.series:'',access:draft.access,groupId:draft.access==='group'?draft.groupId:'',
-    status,mode:draft.mode,startAt:publish&&draft.mode==='立即上架'?time.slice(0,16).replace(' ','T'):draft.startAt,endAt:draft.endAt,
-    limited:draft.limited,trial:draft.trial,display:draft.display,jump:draft.jump,position:draft.position,version:draft.version,
-    log:[...draft.log,[time,publish?draft.mode:'保存草稿']]
-  };
+  const {step,error:previousError,...fields}=draft;
+  const entry={...fields,id,name:draft.name.trim(),status,
+    startAt:publish&&draft.mode==='立即上架'?new Date().toISOString().slice(0,16):draft.startAt,
+    log:[...draft.log,[time,publish?draft.mode:'保存草稿']]};
   plans=draft.id?plans.map(plan=>plan.id===id?entry:plan):[entry,...plans];
   writeStore(planKey,plans);
   planDraft=null;
   scope.plans={};applied.plans={};paging.plans=1;
   go('#/plans');
-  notify(publish?status==='待上架'?'定时上架已配置':'套餐已上架':'套餐草稿已保存');
+  notify(publish?status==='待上架'?'定时上架已配置':'配置已上架':'草稿已保存');
 }
 function viewPlan(plan) {
-  showDialog('套餐详情',`<h4>货架配置</h4>${infos([
-    ['套餐名称',plan.name],['版本','V'+plan.version],['SKU',plan.sku],['状态',plan.status],['产品线',plan.line],
-    ['区域',plan.region],['系列',plan.series||'全部'],['价格',planPrice(plan)],['周期',planSku(plan.sku)?.cycle],
-    ['可见范围',plan.access==='group'?planGroup(plan.groupId)?.name:'全部可见'],['上架时间',utcDisplay(plan.startAt)],
-    ['下架时间',utcDisplay(plan.endAt)],['展示页面',plan.display],['排序',plan.position],['跳转链接',plan.jump]
-  ])}<h4>操作记录</h4>${table(['时间','操作'],plan.log)}`,'',null,true);
+  showDialog('上架配置详情',`<h4>展示设置</h4>${infos([
+    ['配置名称',plan.name],['商品 / 优惠类型',plan.type],['状态',plan.status],['展示地区',plan.region],
+    ['展示页面',plan.display],['上架时间',utcDisplay(plan.startAt)],
+    ['下架时间',plan.endAt?utcDisplay(plan.endAt):'手动下架']
+  ])}<h4>商品与购买资格</h4>${planOfferingSummary(plan)}
+    <h4>操作记录</h4>${table(['时间','操作'],plan.log)}`,'',null,true);
 }
 function confirmPlan(plan,action) {
   const [label,expected]={
     off:['下架','已上架'],cancel:['取消定时','待上架'],delete:['删除','草稿']
   }[action];
   if (plan.status!==expected) return;
-  showDialog(label+'套餐',`<p>确定${label}「${esc(plan.name)}」？</p>${action==='off'?'<p class="small muted">下架后停止新展示，已购权益按原有效期履约。</p>':''}`,label,()=>{
+  const note=action==='off'?'对应 App 入口停止展示，已购买订单按原条款履约。':
+    action==='cancel'?'取消后退回草稿，可修改后重新上架。':'';
+  showDialog(label+'配置',`<p>确定${label}「${esc(plan.name)}」？</p>${note?'<p class="small muted">'+note+'</p>':''}`,label,()=>{
     if (action==='delete') plans=plans.filter(entry=>entry.id!==plan.id);
     else {
       plan.status=action==='off'?'已下架':'草稿';
+      if (action==='cancel') plan.startAt='';
       plan.log.push([timestamp(),label]);
     }
     writeStore(planKey,plans);
-    renderPlans();notify('操作已完成');
+    renderPlans();
+    notify('操作已完成');
   },false,true);
 }
 
@@ -2153,7 +2343,7 @@ const OutreachSchedule=(()=>{
 
   return {nextPushRun,hasCycleDate};
 })();
-const outreachChannels={push:'Push',popup:'App 弹窗'};
+const outreachChannels={push:'Push',popup:'运营弹窗'};
 const outreachProducts={'观鸟线':['K3','Q5'],'狩猎线':['TL300']};
 const allModels='全量';
 const seriesChoices=Object.values(outreachProducts).flat();
@@ -2168,8 +2358,8 @@ const outreachTagList=[
   ['noCapture','绑定后无首图引导','绑定满 1 天，且 Gallery 无拍摄文件上传。','push'],
   ['winBack','7–30 天未激活兜底召回','注册 7–30 天，已绑定本人相机，设备均未拍到鸟类首图。','push'],
   ['highlights','高光时刻更新','账号已有观鸟高光时刻。','push'],
-  ['aiRecognition','AI 识别额度用尽','AI 识别当月剩余次数为 0。','push'],
-  ['aiAssistant','AI 助手额度用尽','AI 问答当月剩余次数为 0。','push'],
+  ['aiRecognition','AI 识别额度用尽','AI 识别当前额度周期的剩余次数为 0。','push'],
+  ['aiAssistant','AI 助手额度用尽','AI 问答当前额度周期的剩余次数为 0。','push'],
   ['trial','开启试用期间','当前处于试用期。','both'],
   ['trialDay3','试用第 3 天','当日进入试用第 3 天。','both'],
   ['renewal','订阅到期前 1 天','当日距订阅到期 1 天。','both'],
@@ -2177,7 +2367,10 @@ const outreachTagList=[
 ];
 const outreachKey='parallens-review-outreach-v1';
 const outreachSteps=['基础信息','内容与文案','推送人群','触发方式','预览与发布'];
-const outreachParent={label:'触达策略',url:'#/strategies'};
+const outreachListUrl=channel=>channel==='popup'?'#/strategies/popup':'#/strategies';
+const outreachTitle=(verb,channel)=>verb+(channel==='push'?' Push':'运营弹窗');
+const outreachParentFor=channel=>({label:outreachChannels[channel],url:outreachListUrl(channel)});
+let outreachListChannel='push';
 let outreachDraft=null;
 let outreachStep=0;
 let outreachError='';
@@ -2186,7 +2379,7 @@ let outreachPreviewClosed=false;
 function freshOutreach(overrides={}) {
   return {name:'',line:'观鸟线',model:'K3',region:'全量',channel:'push',title:'',body:'',
     pushJump:'none',pushPage:'',pushUrl:'',pushImage:null,
-    popupImage:null,imageJump:'none',imagePage:'',imageUrl:'',buttonStyle:'single',
+    popupImage:null,imageJump:'none',imagePage:'',imageUrl:'',buttonStyle:'single',displayPage:'Home',
     primaryText:'',primaryJump:'none',primaryPage:'',primaryUrl:'',
     secondaryText:'',secondaryJump:'none',secondaryPage:'',secondaryUrl:'',
     audience:'',tagIds:[],groupId:'',pushSchedule:'once',pushAt:'',pushTime:'',start:'',end:'',
@@ -2196,10 +2389,10 @@ function outreachSeed(id,state,created,values,metrics={}) {
   return {id,state,created,form:freshOutreach(values),metrics,log:[[created,state]],firstAt:''};
 }
 let outreachRecords=readStore(outreachKey,[
-  outreachSeed('ST-1001','已发布','2026-11-20 07:20 UTC',{name:'订阅到期提醒',title:'Your plan ends tomorrow',body:'Keep your bird camera connected. Review your subscription in My Plan.',pushJump:'internal',pushPage:'My Plan',audience:'tags',tagIds:['renewal'],pushSchedule:'range',start:isoToday(-3),end:isoToday(11),pushTime:'14:00'},{delivered:416,clicks:78}),
+  outreachSeed('ST-1001','已发布','2026-11-20 07:20 UTC',{name:'订阅到期提醒',title:'Your plan ends tomorrow',body:'Keep your bird camera connected. Review your subscription in My Plan.',pushJump:'internal',pushPage:'My Plan',audience:'tags',tagIds:['renewal'],pushSchedule:'range',start:isoToday(-3),end:isoToday(11),pushTime:'14:00'},{sent:380,delivered:416,clicks:78,skipped:36,failed:4}),
   outreachSeed('ST-1002','待发布','2026-11-21 09:05 UTC',{name:'新用户试用引导',channel:'popup',region:'欧洲',popupImage:{name:'演示配图',sample:true},buttonStyle:'dual',primaryText:'Explore your plan',primaryJump:'internal',primaryPage:'My Plan',secondaryText:'Later',audience:'all',start:isoToday(2),end:isoToday(16)}),
   outreachSeed('ST-1003','草稿','2026-11-22 09:30 UTC',{name:'K3 首图引导',audience:'tags',tagIds:['noCapture'],body:'Let’s capture your first bird photo.'}),
-  outreachSeed('ST-1004','已停用','2026-11-19 10:10 UTC',{name:'试用第 3 天提示',channel:'popup',audience:'tags',tagIds:['trialDay3'],primaryText:'View my plan',start:isoToday(-4),end:isoToday(-1),trigger:'cycle',cycle:'weekly',days:['0','3']},{shown:350,primary:62,secondary:0})
+  outreachSeed('ST-1004','已停用','2026-11-19 10:10 UTC',{name:'试用第 3 天提示',channel:'popup',audience:'tags',tagIds:['trialDay3'],popupImage:{name:'演示配图',sample:true},primaryText:'View my plan',start:isoToday(-4),end:isoToday(-1),trigger:'cycle',cycle:'weekly',days:['0','3']},{shown:350,image:37,primary:62})
 ]);
 const outreachById=id=>outreachRecords.find(row=>row.id===id);
 const outreachGroup=form=>groupById(form.groupId);
@@ -2242,11 +2435,28 @@ function outreachScheduleText(form) {
 function firstOutreachRun(form) {
   return form.channel==='push'?OutreachSchedule.nextPushRun(form):form.start+'T00:00';
 }
+function plannedPushAt(record) {
+  const form=record.form;
+  return record.firstAt||(form.pushSchedule==='once'?form.pushAt:form.start+'T'+form.pushTime);
+}
+function outreachDisplayState(record) {
+  if (['草稿','已停用'].includes(record.state)) return record.state;
+  const form=record.form;
+  const now=Date.now();
+  if (form.channel==='popup') {
+    if (form.end<isoToday()) return '已过期';
+    return form.start>isoToday()?'待生效':'生效中';
+  }
+  const first=atUtc(plannedPushAt(record));
+  if (first>now) return '待发送';
+  const last=form.pushSchedule==='once'?first:atUtc(form.end+'T'+form.pushTime);
+  return last<=now?'执行结束':'执行中';
+}
 function updateOutreachStatus() {
   let changed=false;
   for(const record of outreachRecords) {
     const f=record.form;
-    const first=record.firstAt|| (f.start?f.start+'T00:00':'');
+    const first=f.channel==='push'?plannedPushAt(record):f.start+'T00:00';
     if(record.state==='待发布'&&first&&atUtc(first)<=Date.now()) {
       record.state='已发布';
       record.log.push([timestamp(),outreachGroupIssue(f)?'到达计划时间，分组不可用，跳过本次触达':'到达计划时间']);
@@ -2256,32 +2466,46 @@ function updateOutreachStatus() {
   if(changed) writeStore(outreachKey,outreachRecords);
 }
 function outreachStateTag(state) {
-  return tag(state,{'已发布':'green','待发布':'orange'}[state]||'');
+  return tag(state,{'生效中':'green','执行中':'green','待发送':'orange','待生效':'orange'}[state]||'');
 }
 function outreachListActions(record) {
-  return (record.state==='已发布'?`<a href="#/strategies/${record.id}">查看</a>`+linkAction('停用','stop-strategy',record.id,'danger'):
-    (record.state==='草稿'||record.state==='待发布'?`<a href="#/strategies/edit/${record.id}">编辑</a>`:'')+
-    linkAction('删除','delete-strategy',record.id,'danger'))+linkAction('复制新建','copy-strategy',record.id);
+  const state=outreachDisplayState(record);
+  const view=`<a href="#/strategies/${record.id}">查看</a>`;
+  const edit=`<a href="#/strategies/edit/${record.id}">编辑</a>`;
+  const copy=linkAction('复制新建','copy-strategy',record.id);
+  if (state==='草稿') return edit+linkAction('删除','delete-strategy',record.id,'danger')+copy;
+  if (state==='待发送') return view+edit+linkAction('取消排期','cancel-strategy',record.id)+copy;
+  if (['执行中','待生效','生效中'].includes(state)) return view+linkAction(state==='执行中'?'停止后续执行':'停用','stop-strategy',record.id,'danger')+copy;
+  if (state==='已停用'&&record.form.channel==='popup'&&record.form.end>=isoToday())
+    return view+linkAction('重新启用','resume-strategy',record.id)+copy;
+  return view+copy;
 }
-function renderOutreachList() {
+function renderOutreachList(channel) {
   updateOutreachStatus();
+  if (outreachListChannel!==channel) {
+    outreachListChannel=channel;
+    scope.strategies={};applied.strategies={};paging.strategies=1;
+  }
   const q=scope.strategies;
   const filter=applied.strategies;
-  const records=outreachRecords.filter(item=> (!filter.channel||item.form.channel===filter.channel)&&
-    (!filter.state||item.state===filter.state)&&includes(item.form.name,filter.name));
+  const states=channel==='push'?['草稿','待发送','执行中','执行结束','已停用']:['草稿','待生效','生效中','已过期','已停用'];
+  const records=outreachRecords.filter(item=>item.form.channel===channel&&
+    (!filter.state||outreachDisplayState(item)===filter.state)&&includes(item.form.name,filter.name));
   const rows=pageOf('strategies',records).map(record=>[
     htmlCell(`<strong>${esc(record.form.name)}</strong><div class="small muted">${record.id}</div>`),
-    outreachChannels[record.form.channel],record.form.line+' · '+record.form.model,record.form.region,
-    htmlCell(esc(audienceLabel(record.form)),'wrap'),htmlCell(outreachStateTag(record.state)),record.created,
+    record.form.line+' · '+record.form.model,record.form.region,
+    htmlCell(esc(audienceLabel(record.form)),'wrap'),htmlCell(outreachStateTag(outreachDisplayState(record))),record.created,
     htmlCell(outreachListActions(record),'actions')
   ]);
-  main.innerHTML=crumb('运营管理','触达策略')+pageHead('触达策略',`<a class="button primary" href="#/strategies/new">＋ 新建策略</a>`)+`
+  main.innerHTML=crumb('运营管理','触达策略')+pageHead('触达策略',
+    `<a class="button primary" href="#/strategies/new/${channel}">＋ ${outreachTitle('新建',channel)}</a>`)+`
+    <div class="panel"><nav class="section-tabs" aria-label="触达渠道">${Object.entries(outreachChannels).map(([id,label])=>
+      `<a href="${outreachListUrl(id)}" ${id===channel?'aria-current="page"':''}>${label}</a>`).join('')}</nav></div>
     <form class="panel filters" data-search="strategies"><div class="filter-top">
       ${input('name','策略名称',q.name,'placeholder="请输入"')}
-      ${select('channel','渠道',[all('全部'),...Object.entries(outreachChannels)],q.channel)}
-      ${select('state','状态',[all('全部'),'草稿','待发布','已发布','已停用'],q.state)}
+      ${select('state','状态',[all('全部'),...states],q.state)}
     </div><div class="button-row filter-actions"><button class="button primary" type="submit">搜索</button>${button('重置','reset-strategies')}</div><p class="error" data-filter-error hidden></p></form>
-    <section class="panel" aria-label="触达策略列表">${table(['策略名称','渠道','产品线与系列','区域','推送人群','状态','创建时间',{html:'操作',cls:'actions'}],rows)}
+    <section class="panel" aria-label="${outreachChannels[channel]}策略列表">${table(['策略名称','产品线与系列','区域','推送人群','状态','创建时间',{html:'操作',cls:'actions'}],rows)}
     ${pager('strategies',records.length)}</section>`;
 }
 function outreachTextArea(name,label,value,placeholder) {
@@ -2309,8 +2533,9 @@ function renderAppPreview(form) {
   }
   if(outreachPreviewClosed) return `<div class="outreach-phone">${button('再次预览弹窗','open-outreach-preview')}</div>`;
   const makeButton=(key,appearance)=>form[key+'Text']?`<button type="button" class="button ${appearance}" data-action="app-preview-click" data-id="${key}">${esc(form[key+'Text'])}</button>`:'';
-  return `<div class="outreach-phone" aria-label="App 弹窗预览"><div class="app-label">Parallens · App 弹窗</div><div class="outreach-popup">
-    ${outreachPicture(form.popupImage,'Popup image')}
+  const picture=outreachPicture(form.popupImage,'Popup image');
+  return `<div class="outreach-phone" aria-label="App 弹窗预览"><div class="app-label">Parallens · ${esc(form.displayPage||'Home')}</div><div class="outreach-popup">
+    ${form.popupImage&&form.imageJump!=='none'?`<button type="button" class="button" data-action="app-preview-click" data-id="image" aria-label="预览图片跳转">${picture}</button>`:picture}
     ${form.buttonStyle!=='none'?makeButton('primary','primary'):''}
     ${form.buttonStyle==='dual'?makeButton('secondary',''):''}
     <label class="check"><input type="checkbox">Don’t show again</label>${linkAction('关闭预览','close-outreach-preview')}
@@ -2319,7 +2544,7 @@ function renderAppPreview(form) {
 function outreachBaseFields(form) {
   return `<div class="form-grid two">
     ${input('name','策略名称',form.name,'maxlength="60" placeholder="如：试用到期提醒"')}
-    ${select('channel','触达渠道',Object.entries(outreachChannels),form.channel,'data-outreach-refresh')}
+    ${input('channel-label','触达渠道',outreachChannels[form.channel],'readonly')}
     ${select('line','产品线',Object.keys(outreachProducts),form.line,'data-outreach-refresh')}
     ${select('model','产品系列',modelsForLine(form.line),form.model,'data-outreach-refresh')}
     ${select('region','触达区域',outreachRegions,form.region)}
@@ -2365,42 +2590,58 @@ function outreachScheduleFields(form) {
     (form.cycle==='weekly'?`<div class="checks" aria-label="星期">${outreachWeekdays.map((day,i)=>`<label><input type="checkbox" name="days" value="${i}" ${form.days.includes(String(i))?'checked':''}>${day}</label>`).join('')}</div>`:
       form.cycle==='monthly'?select('dayOfMonth','每月指定日期',Array.from({length:31},(_,i)=>[i+1,(i+1)+' 日']),form.dayOfMonth):''):'';
   return `<div class="outreach-form">${select('trigger','触发方式',[['scheduled','定时触发'],['cycle','周期触发']],form.trigger,'data-outreach-refresh')}
-    <div class="form-grid two">${dates}</div>${repeat}<p class="form-text">在符合日期打开 App 且命中人群条件时参与展示。</p></div>`;
+    <div class="form-grid two">${dates}</div>
+    ${select('displayPage','展示页面',outreachPages,form.displayPage||'Home','data-outreach-refresh')}
+    ${repeat}<p class="form-text">用户在符合日期打开 App、到达指定页面且命中人群时，弹窗参与展示。</p></div>`;
 }
 function metricText(form,metrics) {
-  return form.channel==='push'?[['设备送达',metrics.delivered],['Push 点击',metrics.clicks]]:
-    [['实际展示',metrics.shown],['主按钮点击',metrics.primary],['次按钮点击',metrics.secondary]];
+  return form.channel==='push'?[['账号下发成功人数',metrics.sent],['设备送达次数',metrics.delivered],['Push 点击次数',metrics.clicks],
+    ['跳过人数',metrics.skipped],['失败人数',metrics.failed]]:
+    [['实际展示',metrics.shown],['图片点击',form.popupImage?metrics.image:null],
+      ['主按钮点击',form.buttonStyle==='none'?null:metrics.primary],['次按钮点击',form.buttonStyle==='dual'?metrics.secondary:null]];
+}
+function outreachGroupPreview(form) {
+  const group=form.audience==='group'?outreachGroup(form):null;
+  if (!group) return [];
+  const found=new Set(group.members.filter(id=>{
+    const user=memberById(id);
+    return user&&(form.region==='全量'||user.region===form.region)&&
+      (form.model===allModels||bound(user,form.model).length>0);
+  }));
+  return [['分组总人数',new Set(group.members).size+' 人'],['范围内预估人数',found.size+' 人'],['名单时间',group.time]];
 }
 function outreachReviewContent(form) {
   const note=form.channel==='push'?'同策略按账号去重，滚动 24 小时每个账号最多成功下发 1 条运营 Push。':
     '每次打开最多展示 1 个弹窗，App 自带弹窗优先。';
   return `<div class="outreach-form">${shoppingSummary([['策略名称',form.name],['渠道',outreachChannels[form.channel]],
-    ['投放范围',outreachScope(form)],['推送人群',audienceLabel(form)],['触发安排',outreachScheduleText(form)]])}
+    ['投放范围',outreachScope(form)],['推送人群',audienceLabel(form)],...outreachGroupPreview(form),
+    ...(form.channel==='popup'?[['展示页面',form.displayPage||'Home']]:[]),['触发安排',outreachScheduleText(form)]])}
     <div class="callout">${note}</div></div>`;
 }
-function setupOutreachDraft(id) {
+function setupOutreachDraft(id,channel) {
   const item=outreachById(id);
   const key=id||'';
-  if(!outreachDraft||outreachDraft.id!==key) {
-    outreachDraft={id:key,form:item?structuredClone(item.form):freshOutreach()};
+  if(!outreachDraft||outreachDraft.id!==key||(!id&&channel&&outreachDraft.form.channel!==channel)) {
+    outreachDraft={id:key,form:item?freshOutreach(structuredClone(item.form)):freshOutreach({channel:channel||'push'})};
     outreachStep=0;outreachError='';outreachPreviewClosed=false;
   }
 }
-function renderOutreachEditor(id) {
-  setupOutreachDraft(id);
+function renderOutreachEditor(id,channel) {
+  setupOutreachDraft(id,channel);
   const form=outreachDraft.form, n=outreachStep;
-  const title=id?'编辑策略':'新建策略';
+  const scheduled=Boolean(id&&outreachDisplayState(outreachById(id))==='待发送');
+  const title=outreachTitle(id?'编辑':'新建',form.channel);
   const fields=[outreachBaseFields,outreachContentFields,outreachAudienceFields,outreachScheduleFields,outreachReviewContent][n](form);
-  main.innerHTML=crumb('运营管理',title,outreachParent)+pageHead(title)+`
+  main.innerHTML=crumb('运营管理',title,outreachParentFor(form.channel))+pageHead(title)+`
     <div class="commercial-shell">${commercialSteps(outreachSteps,n).replace('wizard-steps','wizard-steps outreach-five')}
     <form id="outreach-form" novalidate><div class="commercial-layout">
       ${commercialSection(outreachSteps[n],fields)}
       <aside class="panel commercial-section commercial-side"><h3>${n===1||n===4?'App 预览':'配置摘要'}</h3>
         ${n===1||n===4?renderAppPreview(form):shoppingSummary([['渠道',outreachChannels[form.channel]],['投放范围',outreachScope(form)],['推送人群',audienceLabel(form)]])}</aside>
     </div><div class="panel wizard-footer commercial-actions">
-      <div><p class="error" id="outreach-error" role="alert" ${outreachError?'':'hidden'}>${esc(outreachError)}</p><a class="small" href="#/strategies">返回触达策略</a></div>
-      <div class="button-row">${n?button('上一步','strategy-back'):''}${button('保存草稿','save-strategy')}
-        <button class="button primary" type="submit">${n===4?'发布策略':'下一步'}</button></div>
+      <div><p class="error" id="outreach-error" role="alert" ${outreachError?'':'hidden'}>${esc(outreachError)}</p><a class="small" href="${outreachListUrl(form.channel)}">返回策略列表</a></div>
+      <div class="button-row">${n?button('上一步','strategy-back'):''}${scheduled?'':button('保存草稿','save-strategy')}
+        <button class="button primary" type="submit">${n===4?(scheduled?'更新排期':'发布策略'):'下一步'}</button></div>
     </div></form></div>`;
 }
 function collectOutreach() {
@@ -2409,7 +2650,7 @@ function collectOutreach() {
   if(!form) return;
   const submitted=new FormData(form);
   for(const [name,value] of submitted) {
-    if (name!=='days'&&name!=='tagIds') outreachDraft.form[name]=value;
+    if (name!=='days'&&name!=='tagIds'&&name!=='channel-label') outreachDraft.form[name]=value;
   }
   if(outreachStep===2&&outreachDraft.form.audience==='tags') outreachDraft.form.tagIds=submitted.getAll('tagIds');
   if(outreachStep===3&&outreachDraft.form.trigger==='cycle'&&outreachDraft.form.cycle==='weekly') outreachDraft.form.days=submitted.getAll('days');
@@ -2423,6 +2664,24 @@ function validJump(form,prefix) {
     (form[prefix+'Jump']==='internal'&&outreachPages.includes(form[prefix+'Page'])) ||
     (form[prefix+'Jump']==='external'&&validOutreachUrl(form[prefix+'Url']));
 }
+function popupMatchesDate(form,day,utcDay) {
+  if (day<form.start||day>form.end) return false;
+  if (form.trigger!=='cycle'||form.cycle==='daily') return true;
+  if (form.cycle==='weekly') return form.days.includes(String((utcDay.getUTCDay()+6)%7));
+  return utcDay.getUTCDate()===Number(form.dayOfMonth);
+}
+function popupCapacityIssue(form,id) {
+  const enabled=outreachRecords.filter(record=>record.id!==id&&record.form.channel==='popup'&&
+    ['待发布','已发布'].includes(record.state)&&record.form.start<=form.end&&record.form.end>=form.start);
+  if (enabled.length<5) return '';
+  const dateStart=Date.parse([form.start,isoToday()].sort().at(-1));
+  for (let time=dateStart;time<=Date.parse(form.end);time+=DAY) {
+    const date=new Date(time), day=date.toISOString().slice(0,10);
+    if (popupMatchesDate(form,day,date)&&enabled.filter(record=>popupMatchesDate(record.form,day,date)).length>=5)
+      return day+' UTC 已达到 5 个生效运营弹窗，请调整时段或先停用其他弹窗。';
+  }
+  return '';
+}
 function checkOutreachStep(form,step) {
   if(step===0) {
     if(!form.name.trim()||!modelsForLine(form.line).includes(form.model)) return '请输入策略名称并选择产品系列。';
@@ -2432,6 +2691,7 @@ function checkOutreachStep(form,step) {
       if(!form.body.trim()) return '请填写 Push 的英文正文。';
       if(!validJump(form,'push')) return '请完善 Push 点击跳转。';
     } else {
+      if(!form.popupImage) return '请上传运营弹窗图片。';
       if(!validJump(form,'image')) return '请完善弹窗图片跳转。';
       if(form.buttonStyle!=='none'&&(!form.primaryText.trim()||!validJump(form,'primary'))) return '请填写按钮文案及跳转目标。';
       if(form.buttonStyle==='dual'&&(!form.secondaryText.trim()||!validJump(form,'secondary'))) return '请填写次按钮文案及跳转目标。';
@@ -2448,7 +2708,10 @@ function checkOutreachStep(form,step) {
       if(!OutreachSchedule.nextPushRun(form)) return '请填写一个未来的 UTC 下发时刻或有效日期区间。';
     } else {
       if(!form.start||!form.end||form.start>form.end||form.end<isoToday()) return '请填写有效的 UTC 起止日期。';
-      if(form.trigger==='cycle'&&!OutreachSchedule.hasCycleDate(form)) return '生效期内至少需要有一个符合周期的日期。';
+      if(!outreachPages.includes(form.displayPage||'Home')) return '请选择运营弹窗的展示页面。';
+      if(form.trigger==='cycle'&&!OutreachSchedule.hasCycleDate({...form,start:form.start>isoToday()?form.start:isoToday()}))
+        return '剩余生效期内至少需要有一个符合周期的日期。';
+      return popupCapacityIssue(form,outreachDraft?.id);
     }
   }
   return '';
@@ -2470,6 +2733,10 @@ function submitOutreach() {
 function saveOutreach(publish) {
   collectOutreach();
   const draft=outreachDraft, form=draft.form;
+  const before=outreachById(draft.id);
+  if (before&&!(outreachDisplayState(before)==='草稿'||publish&&outreachDisplayState(before)==='待发送')) {
+    setOutreachError('策略状态已变化，请返回列表。');return;
+  }
   if(!form.name.trim()) {setOutreachError('请填写策略名称。');return;}
   if(publish) {
     for(let index=0;index<4;index++) {
@@ -2477,7 +2744,6 @@ function saveOutreach(publish) {
       if(issue){outreachStep=index;outreachError=issue;renderOutreachEditor(draft.id);return;}
     }
   }
-  const before=outreachById(draft.id);
   const firstAt=publish?firstOutreachRun(form):'';
   const state=publish?atUtc(firstAt)>Date.now()?'待发布':'已发布':'草稿';
   const record={id:before?.id||'ST-'+(Math.max(1000,...outreachRecords.map(row=>Number(row.id.slice(3))))+1),
@@ -2486,15 +2752,17 @@ function saveOutreach(publish) {
   outreachRecords=before?outreachRecords.map(row=>row.id===record.id?record:row):[record,...outreachRecords];
   writeStore(outreachKey,outreachRecords);
   outreachDraft=null;scope.strategies={};applied.strategies={};paging.strategies=1;
-  go('#/strategies');notify(publish?'演示策略已发布':'策略草稿已保存');
+  go(outreachListUrl(form.channel));notify(publish?'演示策略已发布':'策略草稿已保存');
 }
 function renderOutreachDetails(record) {
   const form=record.form;
-  main.innerHTML=crumb('运营管理','策略详情',outreachParent)+pageHead('策略详情',
-    linkAction('复制新建','copy-strategy',record.id)+button('停用','stop-current-strategy','danger'))+`
+  const state=outreachDisplayState(record);
+  main.innerHTML=crumb('运营管理','策略详情',outreachParentFor(form.channel))+pageHead('策略详情',
+    linkAction('复制新建','copy-strategy',record.id)+
+    (['执行中','待生效','生效中'].includes(state)?linkAction(state==='执行中'?'停止后续执行':'停用','stop-strategy',record.id,'danger'):''))+`
     <div class="commercial-layout"><div class="stack">
       ${commercialSection('配置详情',outreachReviewContent(form))}
-      ${commercialSection('数据追踪',infos(metricText(form,record.metrics)))}
+      ${commercialSection('数据追踪',infos(metricText(form,record.metrics||{}))+'<p class="form-text">示例统计。实际结果由发送回执及 App 事件回传。</p>')}
       ${commercialSection('操作记录',table(['时间','操作'],record.log))}
     </div><aside class="panel commercial-section commercial-side"><h3>App 预览</h3>${renderAppPreview(form)}</aside></div>`;
 }
@@ -2504,16 +2772,32 @@ function copyOutreach(record) {
     firstAt:'',created:timestamp(),metrics:{},log:[[timestamp(),'复制新建']]});
   writeStore(outreachKey,outreachRecords);
   scope.strategies={};applied.strategies={};paging.strategies=1;
-  go('#/strategies');notify('草稿已创建并置顶');
+  go(outreachListUrl(record.form.channel));notify('草稿已创建并置顶');
 }
 function confirmOutreach(record,action) {
-  const stop=action==='stop';
-  if(!record || (stop?record.state!=='已发布':record.state==='已发布')) return;
-  const label=stop?'停用':'删除';
+  if (!record) return;
+  const state=outreachDisplayState(record);
+  const operations={
+    stop:{states:['执行中','待生效','生效中'],label:state==='执行中'?'停止后续执行':'停用',next:'已停用'},
+    cancel:{states:['待发送'],label:'取消排期',next:'草稿'},
+    resume:{states:['已停用'],label:'重新启用',next:record.form.start>isoToday()?'待发布':'已发布'},
+    delete:{states:['草稿'],label:'删除'}
+  };
+  const operation=operations[action];
+  if(!operation.states.includes(state)) return;
+  const {label,next}=operation;
   showDialog(label+'策略',`<p>确定${label}「${esc(record.form.name)}」？</p>` ,label,()=>{
-    if(stop){record.state='已停用';record.log.push([timestamp(),'停用']);}
-    else outreachRecords=outreachRecords.filter(row=>row.id!==record.id);
-    writeStore(outreachKey,outreachRecords);go('#/strategies');notify('策略已'+label);
+    if(action==='resume') {
+      const issue=[0,1,2,3].map(step=>checkOutreachStep(record.form,step)).find(Boolean);
+      if (issue) {showDialog('无法启用运营弹窗',`<p>${esc(issue)}</p>`);return false;}
+    }
+    if (next) {
+      record.state=next;
+      if (action==='cancel') record.firstAt='';
+      record.log.push([timestamp(),label]);
+    } else outreachRecords=outreachRecords.filter(row=>row.id!==record.id);
+    writeStore(outreachKey,outreachRecords);
+    go(outreachListUrl(record.form.channel));notify('操作已完成');
   },false,true);
 }
 
@@ -2531,6 +2815,8 @@ let bannerDraft=null;
 let bannerError='';
 let bannerPreview={model:'K3',region:'北美',index:0};
 const bannerById=id=>banners.find(row=>row.id===id);
+const bannerSteps=['投放范围','图片与跳转','触发方式'];
+let bannerStep=0;
 function bannerJumpSummary(record) {
   return record.bannerJump==='internal' ? '站内 · '+record.bannerPage : record.bannerJump==='external' ? '站外 · '+record.bannerUrl : '—';
 }
@@ -2554,7 +2840,7 @@ function renderBannerList() {
   main.innerHTML=crumb('运营管理','Banner管理')+pageHead('Banner管理',
     button('预览Banner效果','preview-banners')+`<a class="button primary" href="#/banners/new">＋ 新增Banner</a>`)+`
     <form class="panel filters" data-search="banners"><div class="filter-top">
-      ${select('app','APP类型',[all('全部'),...brands],q.app)}
+      ${input('app','APP类型','Parallens','readonly')}
       ${input('title','标题',q.title,'placeholder="请输入"')}
       ${select('line','产品线可见',[all('全部'),...Object.keys(outreachProducts)],q.line)}
       ${select('model','产品系列',[all('全部'),allModels,...seriesChoices],q.model)}
@@ -2572,38 +2858,45 @@ function freshBanner() {
 }
 function setupBanner(id) {
   const key=id||'';
-  if(!bannerDraft||bannerDraft.id!==key){bannerDraft=key?structuredClone(bannerById(id)):freshBanner();bannerError='';}
+  if(!bannerDraft||bannerDraft.id!==key){
+    bannerDraft=key?structuredClone(bannerById(id)):freshBanner();
+    bannerError='';bannerStep=0;
+  }
 }
 function renderBannerEditor(id) {
   setupBanner(id);
   const b=bannerDraft;
   const title=id?'Banner 详情':'新增 Banner';
-  main.innerHTML=crumb('运营管理',title,bannerParent)+pageHead(title)+`
-    <form id="banner-form" class="commercial-shell" novalidate><div class="commercial-layout">
-    <div class="stack">
-      ${commercialSection('Banner 内容',`<div class="outreach-form">
-      ${input('title','标题',b.title,'maxlength="60" placeholder="请输入标题"')}
-      ${outreachImageUpload('bannerImage',b.image)}
-      <div class="form-grid two">${outreachJumpFields(b,'banner')}</div>
-      ${outreachTextArea('memo','备注',b.memo,'选填')}</div>`)}
-      ${commercialSection('可见范围与轮播',`<div class="form-grid two">
+  const step= bannerStep===0?`<div class="form-grid two">
       ${input('app','APP类型',b.app,'readonly')}
       ${select('line','产品线可见',Object.keys(outreachProducts),b.line,'data-outreach-refresh')}
       ${select('model','产品系列',modelsForLine(b.line),b.model)}
       ${select('region','区域可见',outreachRegions,b.region)}
-      ${input('placement','资源位',b.placement,'readonly')}
-      ${select('order','轮播顺序',Array.from({length:10},(_,i)=>String(i+1)),b.order)}
+      ${input('placement','资源位',b.placement,'readonly')}</div>`:
+    bannerStep===1?`<div class="outreach-form">
+      ${input('title','标题',b.title,'maxlength="60" placeholder="请输入标题"')}
+      ${outreachImageUpload('bannerImage',b.image)}
+      <div class="form-grid two">${outreachJumpFields(b,'banner')}</div>
+      ${outreachTextArea('memo','备注',b.memo,'选填')}</div>`:
+    `<div class="form-grid two">
       ${input('startAt','生效时间（UTC）',b.startAt,'type="datetime-local"')}
       ${input('endAt','失效时间（UTC）',b.endAt,'type="datetime-local"')}
-      </div><p class="form-text">生效期内参与轮播，顺序数字越小越靠前。</p>`)}
-     </div>
+      ${select('order','轮播顺序',Array.from({length:10},(_,i)=>String(i+1)),b.order)}
+      </div><p class="form-text">在所选时段生效，轮播顺序越小越靠前。</p>`;
+  main.innerHTML=crumb('运营管理',title,bannerParent)+pageHead(title)+`
+    <div class="commercial-shell">${commercialSteps(bannerSteps,bannerStep)}
+    <form id="banner-form" novalidate><div class="commercial-layout">
+     ${commercialSection(bannerSteps[bannerStep],step)}
      <aside class="panel commercial-section commercial-side"><h3>Explore 预览</h3>
        <div id="banner-content-preview">${outreachPicture(b.image,'Explore 顶部 Banner')}</div>
-       <div class="form-space">${shoppingSummary([['资源位',b.placement],['当前状态',b.state],['点击次数',b.clicks||0]])}</div></aside>
+       <div class="form-space">${shoppingSummary([['资源位',b.placement],['产品系列',b.model],['区域',b.region],
+         ['当前状态',b.state],['点击次数',b.clicks||0]])}</div></aside>
      </div>
      <div class="panel wizard-footer commercial-actions"><div><p class="error" id="banner-error" role="alert" ${bannerError?'':'hidden'}>${esc(bannerError)}</p><a class="small" href="#/banners">返回 Banner管理</a></div>
-       <div class="button-row">${b.state==='停用'?button('保存并启用','save-enable-banner'):''}<button type="submit" class="button primary">保存</button></div></div>
-    </form>`;
+       <div class="button-row">${bannerStep?button('上一步','banner-back'):''}
+         ${bannerStep===2&&b.state==='停用'?button('保存并启用','save-enable-banner'):''}
+         <button type="submit" class="button primary">${bannerStep===2?'保存':'下一步'}</button></div></div>
+    </form></div>`;
 }
 function collectBanner() {
   const form=main.querySelector('#banner-form');
@@ -2612,26 +2905,37 @@ function collectBanner() {
 function conflictBanner(record) {
   return banners.find(row=>row.id!==record.id && row.state==='启用' && row.app===record.app &&
     row.placement===record.placement&&row.line===record.line&&row.order===record.order&&
-    (row.model===record.model||row.model===allModels||record.model===allModels)&&
     (row.region===record.region||row.region==='全量'||record.region==='全量') &&
-    atUtc(row.startAt)<=atUtc(record.endAt) && atUtc(record.startAt)<=atUtc(row.endAt));
+    atUtc(row.startAt)<atUtc(record.endAt) && atUtc(record.startAt)<atUtc(row.endAt));
 }
-function validateBanner(record) {
-  if(!record.title.trim()||!record.image) return '请填写标题并上传 Banner 图片。';
-  if(!modelsForLine(record.line).includes(record.model)) return '请选择可见产品系列。';
-  if(!validJump(record,'banner')) return '请完善站内页面或站外网址。';
-  if(!(atUtc(record.startAt)<atUtc(record.endAt))) return '请填写有效的 UTC 生效时间段。';
-  const conflict=conflictBanner(record);
-  if(conflict) return '与「'+conflict.title+'」的投放范围和生效时段重叠，请调整轮播顺序。';
+function validateBannerStep(record,step,checkOverlap=false) {
+  if(step===0&&(!modelsForLine(record.line).includes(record.model)||!outreachRegions.includes(record.region)))
+    return '请选择可见产品系列及地区。';
+  if(step===1) {
+    if(!record.title.trim()||!record.image) return '请填写标题并上传 Banner 图片。';
+    if(!validJump(record,'banner')) return '请完善站内页面或站外网址。';
+  }
+  if (step===2) {
+    if(!(atUtc(record.startAt)<atUtc(record.endAt))) return '请填写有效的 UTC 生效时间段。';
+    const conflict=checkOverlap?conflictBanner(record):null;
+    if(conflict) return '与「'+conflict.title+'」可能同时展示给同一账号，请更换轮播顺序或调整时段。';
+  }
   return '';
+}
+function submitBanner() {
+  collectBanner();
+  if (bannerStep===2) {saveBanner(false);return;}
+  bannerError=validateBannerStep(bannerDraft,bannerStep);
+  if (!bannerError) bannerStep++;
+  renderBannerEditor(bannerDraft.id);
 }
 function saveBanner(enable) {
   collectBanner();
-  const problem=validateBanner(bannerDraft);
-  if(problem) {
-    bannerError=problem;
-    const error=main.querySelector('#banner-error');
-    error.textContent=problem;error.hidden=false;return;
+  for (let step=0;step<3;step++) {
+    const problem=validateBannerStep(bannerDraft,step,enable||bannerDraft.state==='启用');
+    if (problem) {
+      bannerError=problem;bannerStep=step;renderBannerEditor(bannerDraft.id);return;
+    }
   }
   const before=bannerById(bannerDraft.id);
   const record={...bannerDraft,id:before?.id||'BN-'+(Math.max(1000,...banners.map(row=>Number(row.id.slice(3))))+1),
@@ -2644,7 +2948,7 @@ function saveBanner(enable) {
 function toggleBanner(record) {
   const enabling=record.state!=='启用';
   const label=enabling?'启用':'停用';
-  const conflict=enabling?validateBanner(record):'';
+  const conflict=enabling?[0,1,2].map(step=>validateBannerStep(record,step,true)).find(Boolean):'';
   if(conflict){showDialog('无法启用 Banner',`<p>${esc(conflict)}</p>`);return;}
   showDialog(label+' Banner',`<p>确定${label}「${esc(record.title)}」？</p>`,label,()=>{
     record.state=label;writeStore(bannerKey,banners);renderBannerList();notify('Banner 已'+label);
@@ -2653,7 +2957,7 @@ function toggleBanner(record) {
 function currentRotation() {
   const now=Date.now();
   return banners.filter(row=>row.state==='启用'&&row.app==='Parallens'&&appliesToModel(row,bannerPreview.model)&&
-    (row.region==='全量'||row.region===bannerPreview.region)&&atUtc(row.startAt)<=now&&atUtc(row.endAt)>=now)
+    (row.region==='全量'||row.region===bannerPreview.region)&&atUtc(row.startAt)<=now&&now<atUtc(row.endAt))
     .sort((a,b)=>Number(a.order)-Number(b.order)||a.created.localeCompare(b.created));
 }
 function renderBannerPreview() {
@@ -2697,9 +3001,15 @@ async function selectDemoImage(control) {
 }
 
 function groupReferenceList(group) {
-  const shelf=plans.filter(plan=>plan.groupId===group.id && ['待上架','已上架'].includes(plan.status));
-  const active=outreachRecords.filter(record=>record.form.audience==='group'&&record.form.groupId===group.id&&['已发布','待发布'].includes(record.state));
-  return [...group.refs,...shelf.map(plan=>'套餐 · '+plan.name),...active.map(record=>outreachChannels[record.form.channel]+' · '+record.form.name)];
+  const active=outreachRecords.filter(record=>record.form.audience==='group'&&record.form.groupId===group.id&&
+    ['待发送','执行中','待生效','生效中'].includes(outreachDisplayState(record)));
+  const pendingTasks=batchTasks.filter(task=>!task.issued&&(task.sourceGroupId===group.id||
+    (!task.sourceGroupId&&task.sourceLabel?.startsWith(group.id+' · '))));
+  return [
+    ...group.refs,
+    ...active.map(record=>outreachChannels[record.form.channel]+' · '+record.form.name),
+    ...pendingTasks.map(task=>'批量权益 · '+task.name+'（名单已锁定）')
+  ];
 }
 function currentGroupStatus(group) {
   if (group.status==='已停用') return '已停用';
@@ -2737,18 +3047,22 @@ function render() {
     processBatchQueue();
     tabs('批量下发详情',batchParent);renderBatchDetail(batchById(id));
   } else if (section==='plans' && id==='edit') {
-    tabs('配置套餐',{label:'套餐配置',url:'#/plans'});renderPlanEditor();
+    tabs('上架配置',{label:'套餐配置',url:'#/plans'});renderPlanEditor();
   } else if (section==='plans') {
+    planDraft=null;
     tabs('套餐配置');renderPlans();
-  } else if(section==='strategies'&&!id) {
+  } else if(section==='strategies'&&(!id||Object.hasOwn(outreachChannels,id))) {
     outreachDraft=null;outreachPreviewClosed=false;
-    tabs('触达策略');renderOutreachList();
+    tabs('触达策略');renderOutreachList(id||'push');
   } else if(section==='strategies'&&id==='new') {
-    tabs('新建策略',outreachParent);renderOutreachEditor('');
-  } else if(section==='strategies'&&id==='edit'&&['草稿','待发布'].includes(outreachById(recordId)?.state)) {
-    tabs('编辑策略',outreachParent);renderOutreachEditor(recordId);
-  } else if(section==='strategies'&&outreachById(id)?.state==='已发布') {
-    tabs('策略详情',outreachParent);renderOutreachDetails(outreachById(id));
+    const channel=Object.hasOwn(outreachChannels,recordId)?recordId:'push';
+    tabs('新建策略',outreachParentFor(channel));renderOutreachEditor('',channel);
+  } else if(section==='strategies'&&id==='edit'&&outreachById(recordId)&&['草稿','待发送'].includes(outreachDisplayState(outreachById(recordId)))) {
+    const record=outreachById(recordId);
+    tabs('编辑策略',outreachParentFor(record.form.channel));renderOutreachEditor(recordId);
+  } else if(section==='strategies'&&outreachById(id)) {
+    const record=outreachById(id);
+    tabs('策略详情',outreachParentFor(record.form.channel));renderOutreachDetails(record);
   } else if(section==='banners'&&!id) {
     bannerDraft=null;tabs('Banner管理');renderBannerList();
   } else if(section==='banners'&&(id==='new'||bannerById(id))) {
@@ -2863,7 +3177,8 @@ function handleAction(action, id) {
     case 'copy-strategy':if(outreachById(id))copyOutreach(outreachById(id));break;
     case 'delete-strategy':confirmOutreach(outreachById(id),'delete');break;
     case 'stop-strategy':confirmOutreach(outreachById(id),'stop');break;
-    case 'stop-current-strategy':confirmOutreach(outreachById(navPath()[1]),'stop');break;
+    case 'cancel-strategy':confirmOutreach(outreachById(id),'cancel');break;
+    case 'resume-strategy':confirmOutreach(outreachById(id),'resume');break;
     case 'remove-outreach-image':
       if(id==='bannerImage') {
         collectBanner();bannerDraft.image=null;renderBannerEditor(bannerDraft.id);
@@ -2884,6 +3199,8 @@ function handleAction(action, id) {
       break;
     }
     case 'save-enable-banner':saveBanner(true);break;
+    case 'banner-back':
+      collectBanner();bannerStep--;bannerError='';renderBannerEditor(bannerDraft.id);break;
     case 'toggle-banner':if(bannerById(id))toggleBanner(bannerById(id));break;
     case 'preview-banners':openBannerPreview();break;
     case 'previous-banner':bannerPreview.index--;renderBannerPreview();break;
@@ -2920,13 +3237,12 @@ function handleAction(action, id) {
     case 'wizard-type':wizard.type=id;refreshGroupSettings(action,id);break;
     case 'wizard-series':wizard.series=id;refreshGroupSettings(action,id);break;
     case 'catalog-tab':wizard.category=id;refreshGroupSettings(action,id);break;
-    case 'match-rules':wizard.match=id;refreshGroupSettings(action,id);break;
     case 'clear-field':
       wizard.rules=wizard.rules.filter(rule=>rule.field!==id);refreshGroupSettings(action,id);break;
     case 'clear-rules':wizard.rules=[];refreshGroupSettings(action,id);break;
     case 'toggle-preset':{
       const [field,value]=id.split(':');
-      if (!groupCriteria[field]?.choices.some(choice=>choice.label===value)) break;
+      if (!firstReleaseGroupFields.has(field)||!groupCriteria[field]?.choices.some(choice=>choice.label===value)) break;
       const index=wizard.rules.findIndex(rule=>rule.field===field && rule.op==='preset' && rule.value===value);
       if (index>=0) wizard.rules.splice(index,1);
       else wizard.rules.push({field,op:'preset',value});
@@ -3052,16 +3368,22 @@ document.addEventListener('change',async event=>{
   if (e.matches('[data-benefit-filter]')) {
     benefitTaskFilter=e.value;renderBenefitTasks(memberById(navPath()[1]));return;
   }
-  if (e.name==='item' && e.closest('#benefit-form')) {
-    collectBenefit();benefit.error='';renderBenefit(memberById(benefit.uid));return;
+  if (['item','term'].includes(e.name)&&e.closest('#benefit-form')) {
+    collectBenefit();
+    benefit.error='';
+    renderBenefit(memberById(benefit.uid));
+    main.querySelector('#benefit-form select[name="'+e.name+'"]').focus();
+    return;
   }
-  if (e.closest('#plan-form') && ['line','sku','region','series','access','mode','limited'].includes(e.name)) {
-    const previousLine=planDraft.line;
+  if (e.closest('#plan-form') && ['type','offering','region','mode'].includes(e.name)) {
     collectPlan();
-    if(previousLine!==planDraft.line){planDraft.sku='';planDraft.series='';planDraft.access='all';planDraft.groupId='';}
-    if(planDraft.access==='all')planDraft.groupId='';
-    if(planDraft.mode==='立即上架')planDraft.startAt='';
-    planDraft.error='';renderPlanEditor();return;
+    if (e.name==='type') planDraft.offering='';
+    if (!planRegionChoices(planOffering(planDraft.offering)).includes(planDraft.region)) planDraft.region='';
+    if (planDraft.mode==='立即上架') planDraft.startAt='';
+    planDraft.error='';
+    renderPlanEditor();
+    main.querySelector('#plan-form select[name="'+e.name+'"]').focus();
+    return;
   }
   if (e.id==='group-file' && e.files[0]) {
     const file=e.files[0], current=wizard;
@@ -3083,7 +3405,7 @@ document.addEventListener('submit',event=>{
   else if(form.id==='batch-form') submitBatch();
   else if (form.id==='plan-form' && !planDraft.step) previewPlan();
   else if (form.id==='outreach-form') submitOutreach();
-  else if (form.id==='banner-form') saveBanner(false);
+  else if (form.id==='banner-form') submitBanner();
 });
 window.addEventListener('hashchange',()=>{
   if (modal.open) modal.close();
